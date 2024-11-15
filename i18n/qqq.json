@@ -4,5 +4,7 @@
 			"tesinormed"
 		]
 	},
-	"rawcss-description": "{{desc|name=RawCSS|url=https://www.mediawiki.org/wiki/Extension:RawCSS}}"
+	"rawcss-desc": "{{desc|name=RawCSS|url=https://www.mediawiki.org/wiki/Extension:RawCSS}}",
+	"action-editrawcss": "{{doc-action|editrawcss}}",
+	"right-editrawcss": "{{doc-right|editrawcss}}"
 }

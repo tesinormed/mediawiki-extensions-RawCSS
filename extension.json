@@ -5,15 +5,15 @@
 		"tesinormed"
 	],
 	"url": "https://www.mediawiki.org/wiki/Extension:RawCSS",
-	"descriptionmsg": "rawcss-description",
+	"descriptionmsg": "rawcss-desc",
 	"license-name": "CC0-1.0",
 	"type": "parserhook",
 	"requires": {
 		"MediaWiki": ">= 1.42.0"
 	},
 	"ExtensionMessagesFiles": {
-		"RawCSSMagic": "RawCSS.magic.php",
-		"RawCSSNamespaces": "RawCSS.namespaces.php"
+		"RawCSSMagic": "RawCSS.i18n.magic.php",
+		"RawCSSNamespaces": "RawCSS.i18n.namespaces.php"
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\RawCSS\\": "src/"

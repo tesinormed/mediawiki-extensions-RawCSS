@@ -4,7 +4,9 @@
 			"tesinormed"
 		]
 	},
-	"rawcss-description": "Allows for the transclusion of raw (templated) CSS from the {{ns:RawCSS}} namespace into the <head> of pages",
+	"rawcss-desc": "Allows for the transclusion of raw (templated) CSS from the {{ns:RawCSS}} namespace into the <head> of pages",
+	"action-editrawcss": "create and edit raw CSS",
+	"right-editrawcss": "Create and edit raw CSS in the <code>{{ns:RawCSS}}</code> namespace",
 	"rawcss-page-error-category": "Pages with RawCSS errors",
 	"rawcss-style-sheet-invalid": "Invalid style sheet to load in the RawCSS parser function.",
 	"rawcss-style-sheet-not-found": "Style sheet [[:$1|$2]] not found for the RawCSS parser function.",
