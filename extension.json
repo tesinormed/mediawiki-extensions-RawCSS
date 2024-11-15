@@ -1,0 +1,88 @@
+{
+  "name": "RawCSS",
+  "version": "0.1.0",
+  "author": [
+    "tesinormed"
+  ],
+  "url": "https://www.mediawiki.org/wiki/Extension:RawCSS",
+  "descriptionmsg": "rawcss-description",
+  "license-name": "CC0-1.0",
+  "type": "parserhook",
+  "requires": {
+    "MediaWiki": ">= 1.42.0"
+  },
+  "ExtensionMessagesFiles": {
+    "RawCSSMagic": "RawCSS.magic.php",
+    "RawCSSNamespaces": "RawCSS.namespaces.php"
+  },
+  "AutoloadNamespaces": {
+    "MediaWiki\\Extension\\RawCSS\\": "src/"
+  },
+  "config": {
+    "RawCSSLatteCacheDirectory": {
+      "value": false
+    },
+    "RawCSSPurgeOnStyleSheetEdit": {
+      "value": true
+    },
+    "RawCSSPreloadHrefRegex": {
+      "value": ".+"
+    }
+  },
+  "ConfigRegistry": {
+    "rawcss": "GlobalVarConfig::newInstance"
+  },
+  "namespaces": [
+    {
+      "id": 6200,
+      "constant": "NS_RAWCSS",
+      "name": "RawCSS",
+      "defaultcontentmodel": "css",
+      "protection": "editrawcss"
+    },
+    {
+      "id": 6201,
+      "constant": "NS_RAWCSS_TALK",
+      "name": "RawCSS_talk",
+      "subpages": true
+    }
+  ],
+  "HookHandlers": {
+    "main": {
+      "class": "MediaWiki\\Extension\\RawCSS\\Hooks",
+      "services": [
+        "ConfigFactory",
+        "ConnectionProvider",
+        "LinkTargetLookup",
+        "WikiPageFactory"
+      ]
+    }
+  },
+  "Hooks": {
+    "ParserFirstCallInit": "main",
+    "OutputPageParserOutput": "main",
+    "PageSaveComplete": "main"
+  },
+  "AvailableRights": [
+    "editrawcss"
+  ],
+  "GroupPermissions": {
+    "*": {
+      "editrawcss": false
+    },
+    "interface-admin": {
+      "editrawcss": true
+    }
+  },
+  "GrantPermissions": {
+    "editsiteconfig": {
+      "editrawcss": true
+    }
+  },
+  "MessagesDirs": {
+    "RawCSS": [
+      "i18n"
+    ]
+  },
+  "manifest_version": 2
+}
