@@ -1,12 +1,12 @@
 {
-  "@metadata": {
-    "authors": [
-      "tesinormed"
-    ]
-  },
-  "rawcss-description": "Allows for the transclusion of raw (templated) CSS from the {{ns:RawCSS}} namespace into the <head> of pages",
-  "rawcss-page-error-category": "Pages with RawCSS errors",
-  "rawcss-style-sheet-invalid": "Invalid style sheet to load in the RawCSS parser function.",
-  "rawcss-style-sheet-not-found": "Style sheet [[:$1|$2]] not found for the RawCSS parser function.",
-  "rawcss-style-sheet-rendering-failed": "RawCSS style sheet was unable to be rendered."
+	"@metadata": {
+		"authors": [
+			"tesinormed"
+		]
+	},
+	"rawcss-description": "Allows for the transclusion of raw (templated) CSS from the {{ns:RawCSS}} namespace into the <head> of pages",
+	"rawcss-page-error-category": "Pages with RawCSS errors",
+	"rawcss-style-sheet-invalid": "Invalid style sheet to load in the RawCSS parser function.",
+	"rawcss-style-sheet-not-found": "Style sheet [[:$1|$2]] not found for the RawCSS parser function.",
+	"rawcss-style-sheet-rendering-failed": "RawCSS style sheet was unable to be rendered."
 }

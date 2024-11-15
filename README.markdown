@@ -11,7 +11,7 @@ A MediaWiki extension which allows for the transclusion of raw (templated) CSS f
 |----------------------------------|---------------------------------------------------------------------------------------|----------------------------------|
 | `$wgRawCSSLatteCachePath`        | The path for Latte to put its templates                                               | `$wgCacheDirectory/RawCSS/Latte` |
 | `$wgRawCSSPurgeOnStyleSheetEdit` | If the pages which use a style sheet should be purged when that style sheet is edited | `true`                           |
-| `$wgRawCSSPreloadHrefRegex`      | The regex for validating a URL in the `href` of a preload directive                   | `.+`                             |                     
+| `$wgRawCSSPreloadHrefRegex`      | The regex for validating a URL in the `href` of a preload directive                   | `.+`                             |
 
 ## User guide
 
@@ -32,13 +32,13 @@ Another trick you may use (which is helpful for colors) is by prefixing it with 
 `/*#*/unset/*{{$color}}*/`).
 This will become `#{{$color}}`.
 
-> [!NOTE]  
+> [!NOTE]
 > Both of these tricks will be removed when it is used on a page; it will not be removed in the source style sheet.
 
 If you need to add anything with escaped characters, like "#" or "/", you may either use `noescape` (like
 `{{$color|noescape}}`) or use the `unset` trick.
 
-> [!WARNING]  
+> [!WARNING]
 > Be careful when you use `noescape`; this entirely disables escaping of input,
 > which [could be dangerous for your wiki's security](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html).
 
