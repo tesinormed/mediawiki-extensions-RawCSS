@@ -8,6 +8,7 @@ use MediaWiki\Extension\RawCSS\Utilities\ErrorFormatter;
 use MediaWiki\Extension\RawCSS\Utilities\ParameterExtractor;
 use MediaWiki\Extension\RawCSS\Utilities\TemplateEngine;
 use MediaWiki\Parser\Parser;
+use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Revision\SlotRecord;
 use MediaWiki\Title\Title;
 use PPFrame;
@@ -52,7 +53,9 @@ class RawCssFunction {
 		$styleSheetTemplatePath = $this->templateEngine->getLatteTemplatePath( $styleSheetTitle, $revisionRecord );
 		if ( !file_exists( $styleSheetTemplatePath ) ) {
 			$this->templateEngine->writeLatteTemplate(
-				$styleSheetTitle, $revisionRecord, $revisionRecord->getContent( SlotRecord::MAIN )
+				$styleSheetTitle,
+				$revisionRecord,
+				$revisionRecord->getContent( SlotRecord::MAIN, RevisionRecord::RAW )
 			);
 		}
 
