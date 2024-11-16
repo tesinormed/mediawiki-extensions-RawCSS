@@ -18,6 +18,10 @@ class TemplateEngine {
 	public function __construct( Config $mainConfig, Config $extensionConfig ) {
 		$this->mainConfig = $mainConfig;
 		$this->extensionConfig = $extensionConfig;
+		$latteCachePath = self::getLatteCachePath();
+		if ( !file_exists( $latteCachePath ) ) {
+			mkdir( $latteCachePath, permissions: 0755, recursive: true );
+		}
 	}
 
 	/**
@@ -82,7 +86,6 @@ class TemplateEngine {
 			'varType',
 			'while',
 		] );
-
 		$policy->allowFilters( [
 			'batch',
 			'breaklines',
@@ -156,18 +159,13 @@ class TemplateEngine {
 	 */
 	public function createLatteEngine(): Engine {
 		$latte = new Engine();
-		$tempDirectory = self::getLatteCachePath();
-		if ( !file_exists( $tempDirectory ) ) {
-			mkdir( $tempDirectory, permissions: 0755, recursive: true );
-		}
-		$latte->setTempDirectory( $tempDirectory );
-		$latte->setAutoRefresh( false );
-		$latte->setSandboxMode();
-		$latte->enablePhpLinter( PHP_BINARY );
-		$latte->setStrictParsing();
-		$latte->setStrictTypes();
 		$latte->setPolicy( self::createLattePolicy() );
+		$latte->setSandboxMode();
 		$latte->setContentType( ContentType::Css );
+		$latte->setTempDirectory( self::getLatteCachePath() );
+		$latte->setAutoRefresh( false );
+		$latte->setStrictTypes();
+		$latte->setStrictParsing();
 		return $latte;
 	}
 
