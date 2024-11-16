@@ -40,6 +40,116 @@ class TemplateEngine {
 		}
 	}
 
+	private static function createLattePolicy(): SecurityPolicy {
+		$policy = new SecurityPolicy();
+
+		$policy->allowTags( [
+			'_',
+			'=',
+			'attr',
+			'block',
+			'breakIf',
+			'capture',
+			'case',
+			'class',
+			'continueIf',
+			'default',
+			'define',
+			'do',
+			'else',
+			'elseif',
+			'elseifset',
+			'first',
+			'for',
+			'foreach',
+			'if',
+			'ifchanged',
+			'ifcontent',
+			'iterateWhile',
+			'ifset',
+			'l',
+			'last',
+			'r',
+			'rollback',
+			'sep',
+			'skipIf',
+			'spaceless',
+			'switch',
+			'templateType',
+			'translate',
+			'try',
+			'var',
+			'varType',
+			'while',
+		] );
+
+		$policy->allowFilters( [
+			'batch',
+			'breaklines',
+			'breakLines',
+			'bytes',
+			'capitalize',
+			'ceil',
+			'clamp',
+			'date',
+			'escapeCss',
+			'escapeHtml',
+			'escapeHtmlComment',
+			'escapeICal',
+			'escapeJs',
+			'escapeUrl',
+			'escapeXml',
+			'explode',
+			'first',
+			'firstUpper',
+			'floor',
+			'checkUrl',
+			'implode',
+			'indent',
+			'join',
+			'last',
+			'length',
+			'lower',
+			'number',
+			'noCheck',
+			'noEscape',
+			'padLeft',
+			'padRight',
+			'query',
+			'random',
+			'repeat',
+			'replace',
+			'replaceRe',
+			'reverse',
+			'round',
+			'slice',
+			'sort',
+			'spaceless',
+			'split',
+			'strip',
+			'striphtml',
+			'stripHtml',
+			'striptags',
+			'stripTags',
+			'substr',
+			'trim',
+			'truncate',
+			'upper',
+			'webalize',
+		] );
+		$policy->allowFunctions( [
+			'clamp',
+			'divisibleBy',
+			'even',
+			'first',
+			'last',
+			'odd',
+			'slice',
+		] );
+
+		return $policy;
+	}
+
 	/**
 	 * Returns the correctly configured Latte engine
 	 * @return Engine the Latte engine
@@ -56,7 +166,7 @@ class TemplateEngine {
 		$latte->enablePhpLinter( PHP_BINARY );
 		$latte->setStrictParsing();
 		$latte->setStrictTypes();
-		$latte->setPolicy( SecurityPolicy::createSafePolicy() );
+		$latte->setPolicy( self::createLattePolicy() );
 		$latte->setContentType( ContentType::Css );
 		return $latte;
 	}
