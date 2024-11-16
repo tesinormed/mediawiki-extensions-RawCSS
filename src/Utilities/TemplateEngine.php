@@ -44,114 +44,13 @@ class TemplateEngine {
 		}
 	}
 
-	private static function createLattePolicy(): SecurityPolicy {
-		$policy = new SecurityPolicy();
-
-		$policy->allowTags( [
-			'_',
-			'=',
-			'attr',
-			'block',
-			'breakIf',
-			'capture',
-			'case',
-			'class',
-			'continueIf',
-			'default',
-			'define',
-			'do',
-			'else',
-			'elseif',
-			'elseifset',
-			'exitIf',
-			'first',
-			'for',
-			'foreach',
-			'if',
-			'ifchanged',
-			'ifcontent',
-			'iterateWhile',
-			'ifset',
-			'l',
-			'last',
-			'r',
-			'rollback',
-			'sep',
-			'skipIf',
-			'spaceless',
-			'switch',
-			'templateType',
-			'translate',
-			'try',
-			'var',
-			'varType',
-			'while',
-		] );
-		$policy->allowFilters( [
-			'batch',
-			'breaklines',
-			'breakLines',
-			'bytes',
-			'capitalize',
-			'ceil',
-			'clamp',
-			'date',
-			'escapeCss',
-			'escapeHtml',
-			'escapeHtmlComment',
-			'escapeICal',
-			'escapeJs',
-			'escapeUrl',
-			'escapeXml',
-			'explode',
-			'first',
-			'firstUpper',
-			'floor',
-			'checkUrl',
-			'implode',
-			'indent',
-			'join',
-			'last',
-			'length',
-			'lower',
-			'number',
-			'noCheck',
-			'noEscape',
-			'padLeft',
-			'padRight',
-			'query',
-			'random',
-			'repeat',
-			'replace',
-			'replaceRe',
-			'reverse',
-			'round',
-			'slice',
-			'sort',
-			'spaceless',
-			'split',
-			'strip',
-			'striphtml',
-			'stripHtml',
-			'striptags',
-			'stripTags',
-			'substr',
-			'trim',
-			'truncate',
-			'upper',
-			'webalize',
-		] );
-		$policy->allowFunctions( [
-			'clamp',
-			'divisibleBy',
-			'even',
-			'first',
-			'last',
-			'odd',
-			'slice',
-		] );
-
-		return $policy;
+	private function createLattePolicy(): SecurityPolicy {
+		if ( $this->extensionConfig->has( 'RawCSSLatteSecurityPolicy' )
+			&& !empty( $this->extensionConfig->get( 'RawCSSLatteSecurityPolicy' ) ) ) {
+			return $this->extensionConfig->get( 'RawCSSLatteSecurityPolicy' );
+		} else {
+			return SecurityPolicy::createSafePolicy();
+		}
 	}
 
 	/**

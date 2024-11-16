@@ -1,6 +1,6 @@
 {
 	"name": "RawCSS",
-	"version": "0.2.4",
+	"version": "0.3.0",
 	"author": [
 		"tesinormed"
 	],
@@ -20,6 +20,9 @@
 	},
 	"config": {
 		"RawCSSLatteCacheDirectory": {
+			"value": false
+		},
+		"RawCSSLatteSecurityPolicy": {
 			"value": false
 		},
 		"RawCSSPurgeOnStyleSheetEdit": {

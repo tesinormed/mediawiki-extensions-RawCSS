@@ -6,10 +6,11 @@ A MediaWiki extension which allows for the transclusion of raw (templated) CSS f
 
 ## System administrator guide
 
-|       Configuration option       | Description                                                                           | Default                          |
-|:--------------------------------:|---------------------------------------------------------------------------------------|----------------------------------|
-|    `$wgRawCSSLatteCachePath`     | The path for Latte to put its templates                                               | `$wgCacheDirectory/RawCSS/Latte` |
-| `$wgRawCSSPurgeOnStyleSheetEdit` | If the pages which use a style sheet should be purged when that style sheet is edited | `true`                           |
+|       Configuration option       | Description                                                                           | Default                                |
+|:--------------------------------:|---------------------------------------------------------------------------------------|----------------------------------------|
+|    `$wgRawCSSLatteCachePath`     | The path for Latte to put its templates                                               | `$wgCacheDirectory/RawCSS/Latte`       |
+| `$wgRawCSSPurgeOnStyleSheetEdit` | If the pages which use a style sheet should be purged when that style sheet is edited | `true`                                 |
+|  `$wgRawCSSLatteSecurityPolicy`  | The [Latte security policy](https://latte.nette.org/en/sandbox) to use                | See `src/Utilities/TemplateEngine.php` |
 
 ## User guide
 
