@@ -63,6 +63,7 @@ class TemplateEngine {
 			'else',
 			'elseif',
 			'elseifset',
+			'exitIf',
 			'first',
 			'for',
 			'foreach',
