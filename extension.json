@@ -1,6 +1,6 @@
 {
 	"name": "RawCSS",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"author": [
 		"tesinormed"
 	],
@@ -24,9 +24,6 @@
 		},
 		"RawCSSPurgeOnStyleSheetEdit": {
 			"value": true
-		},
-		"RawCSSPreloadHrefRegex": {
-			"value": ".+"
 		}
 	},
 	"ConfigRegistry": {
@@ -61,6 +58,7 @@
 	"Hooks": {
 		"ParserFirstCallInit": "main",
 		"OutputPageParserOutput": "main",
+		"EditFilterMergedContent": "main",
 		"PageSaveComplete": "main"
 	},
 	"AvailableRights": [

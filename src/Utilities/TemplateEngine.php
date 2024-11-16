@@ -2,12 +2,14 @@
 
 namespace MediaWiki\Extension\RawCSS\Utilities;
 
+use Content;
 use InvalidArgumentException;
 use Latte\ContentType;
 use Latte\Engine;
 use Latte\Sandbox\SecurityPolicy;
 use MediaWiki\Config\Config;
-use WikiPage;
+use MediaWiki\Revision\RevisionRecord;
+use MediaWiki\Title\Title;
 
 class TemplateEngine {
 	private Config $mainConfig;
@@ -38,12 +40,6 @@ class TemplateEngine {
 		}
 	}
 
-	private function createLattePolicy(): SecurityPolicy {
-		$policy = SecurityPolicy::createSafePolicy();
-		$policy->allowFilters( [ 'dataStream', 'noEscape', 'noCheck' ] );
-		return $policy;
-	}
-
 	/**
 	 * Returns the correctly configured Latte engine
 	 * @return Engine the Latte engine
@@ -56,43 +52,49 @@ class TemplateEngine {
 		}
 		$latte->setTempDirectory( $tempDirectory );
 		$latte->setAutoRefresh( false );
+		$latte->setSandboxMode();
+		$latte->enablePhpLinter( PHP_BINARY );
 		$latte->setStrictParsing();
 		$latte->setStrictTypes();
-		$latte->setPolicy( self::createLattePolicy() );
+		$latte->setPolicy( SecurityPolicy::createSafePolicy() );
 		$latte->setContentType( ContentType::Css );
 		return $latte;
 	}
 
 	/**
 	 * Returns the correct path for the Latte template of a RawCSS style sheet
-	 * @param WikiPage $wikiPage
+	 * @param Title $title
+	 * @param RevisionRecord|null $identifier
 	 * @return string the path of the Latte template
 	 */
-	public function getLatteTemplatePath( WikiPage $wikiPage ): string {
-		if ( $wikiPage->getNamespace() != NS_RAWCSS ) {
-			throw new InvalidArgumentException( '$wikiPage is not in the NS_RAWCSS namespace' );
+	public function getLatteTemplatePath( Title $title, ?RevisionRecord $identifier ): string {
+		if ( $title->getNamespace() !== NS_RAWCSS ) {
+			throw new InvalidArgumentException( '$title is not in the RawCSS namespace' );
 		}
 
-		$titleText = $wikiPage->getTitle()->getText();
-		$uniqueId = $wikiPage->getRevisionRecord()->getId() ?: sha1( $wikiPage->getContent()->getText() );
-		return self::getLatteCachePath() . DIRECTORY_SEPARATOR . $titleText . '#' . $uniqueId . '.latte';
+		$titleText = $title->getText();
+		if ( $identifier !== null ) {
+			$suffix = $identifier->getId();
+		} else {
+			$suffix = 'T' . time();
+		}
+		return self::getLatteCachePath() . DIRECTORY_SEPARATOR . $titleText . '#' . $suffix . '.latte';
 	}
 
 	/**
 	 * Writes the Latte template of a RawCSS style sheet and warms up the Latte cache (precompile it)
-	 * @param WikiPage $wikiPage
+	 * @param Title $title
+	 * @param RevisionRecord|null $identifier
+	 * @param Content $content
 	 * @return void
 	 */
-	public function writeLatteTemplate( WikiPage $wikiPage ): void {
-		// implied: the namespace is correct
-		$path = self::getLatteTemplatePath( $wikiPage );
-		$contentText = $wikiPage->getContent()->getText();
-		// force syntax to be double
-		$contentText = '{syntax double}' . $contentText . '{/syntax}';
-		// remove the hack of /*#*/unset/*{{$color}}*/
-		$contentText = preg_replace( '%(?:/\*(.+)\*/)?unset/\*({{.+}})+\*/%m', '$1$2', $contentText );
-		// remove the hack of /*{{$color}}*/
-		$contentText = preg_replace( '%/\*({{.+}})+\*/%m', '$1', $contentText );
+	public function writeLatteTemplate( Title $title, ?RevisionRecord $identifier, Content $content ): void {
+		$path = self::getLatteTemplatePath( $title, $identifier );
+		$contentText = $content->getText();
+		// replace `/*whatever1*/ unset /*{whatever2}*/` with `whatever1{whatever2}`
+		$contentText = preg_replace( '%(?:/\*(.+)\*/)? ?unset ?/\*(\{.+})+\*/%m', '$1$2', $contentText );
+		// replace `/*{whatever}*/ with `{whatever}`
+		$contentText = preg_replace( '%/\*(\{.+})+\*/%m', '$1', $contentText );
 		file_put_contents( $path, $contentText );
 
 		// pre-generate the cache

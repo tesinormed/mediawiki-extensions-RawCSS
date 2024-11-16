@@ -2,9 +2,13 @@
 
 namespace MediaWiki\Extension\RawCSS;
 
+use Content;
 use MediaWiki\Config\Config;
 use MediaWiki\Config\ConfigFactory;
-use MediaWiki\Extension\RawCSS\Utilities\PreloadLinkGenerator;
+use MediaWiki\Context\IContextSource;
+use MediaWiki\Extension\RawCSS\Parser\LinkHeaderFunction;
+use MediaWiki\Extension\RawCSS\Parser\RawCssFunction;
+use MediaWiki\Hook\EditFilterMergedContentHook;
 use MediaWiki\Hook\ParserFirstCallInitHook;
 use MediaWiki\Linker\LinkTargetLookup;
 use MediaWiki\Output\Hook\OutputPageParserOutputHook;
@@ -13,17 +17,25 @@ use MediaWiki\Page\WikiPageFactory;
 use MediaWiki\Parser\Parser;
 use MediaWiki\Parser\ParserOutput;
 use MediaWiki\Revision\RevisionRecord;
+use MediaWiki\Status\Status;
 use MediaWiki\Storage\EditResult;
 use MediaWiki\Storage\Hook\PageSaveCompleteHook;
 use MediaWiki\Title\TitleValue;
 use MediaWiki\User\User;
+use Throwable;
 use Wikimedia\Rdbms\IConnectionProvider;
 use WikiPage;
 
-class Hooks implements ParserFirstCallInitHook, OutputPageParserOutputHook, PageSaveCompleteHook {
+class Hooks implements
+	ParserFirstCallInitHook,
+	OutputPageParserOutputHook,
+	EditFilterMergedContentHook,
+	PageSaveCompleteHook
+{
 	private Config $mainConfig;
 	private Config $extensionConfig;
-	private RawCSS $rawCss;
+	private RawCssFunction $rawCssFunction;
+	private LinkHeaderFunction $linkHeaderFunction;
 	private IConnectionProvider $databaseProvider;
 	private LinkTargetLookup $linkTargetLookup;
 	private WikiPageFactory $wikiPageFactory;
@@ -36,7 +48,8 @@ class Hooks implements ParserFirstCallInitHook, OutputPageParserOutputHook, Page
 	) {
 		$this->mainConfig = $configFactory->makeConfig( 'main' );
 		$this->extensionConfig = $configFactory->makeConfig( 'rawcss' );
-		$this->rawCss = new RawCSS( $this->mainConfig, $this->extensionConfig, $wikiPageFactory );
+		$this->rawCssFunction = new RawCssFunction( $this->mainConfig, $this->extensionConfig );
+		$this->linkHeaderFunction = new LinkHeaderFunction();
 		$this->databaseProvider = $databaseProvider;
 		$this->linkTargetLookup = $linkTargetLookup;
 		$this->wikiPageFactory = $wikiPageFactory;
@@ -48,9 +61,12 @@ class Hooks implements ParserFirstCallInitHook, OutputPageParserOutputHook, Page
 	 * @return void
 	 */
 	public function onParserFirstCallInit( $parser ): void {
-		$parser->setFunctionHook(
-			'rawcss',
-			[ new RawCSS( $this->mainConfig, $this->extensionConfig, $this->wikiPageFactory ), 'onFunctionHook' ],
+		$parser->setFunctionHook( 'rawcss',
+			[ $this->rawCssFunction, 'onFunctionHook' ],
+			Parser::SFH_OBJECT_ARGS
+		);
+		$parser->setFunctionHook( 'linkheader',
+			[ $this->linkHeaderFunction, 'onFunctionHook' ],
 			Parser::SFH_OBJECT_ARGS
 		);
 	}
@@ -63,21 +79,37 @@ class Hooks implements ParserFirstCallInitHook, OutputPageParserOutputHook, Page
 	 */
 	public function onOutputPageParserOutput( $outputPage, $parserOutput ): void {
 		// add inline styles for each compiled style sheet
-		foreach ( ( $parserOutput->getExtensionData( RawCSS::STYLE_SHEETS_DATA_KEY ) ?: [] ) as $styleSheet ) {
+		foreach ( ( $parserOutput->getExtensionData( RawCssFunction::DATA_KEY ) ?: [] ) as $styleSheet ) {
 			$outputPage->addInlineStyle( $styleSheet );
 		}
 
-		// get everything requested to be preloaded
-		$preloadData = $parserOutput->getExtensionData( RawCSS::PRELOAD_DATA_KEY );
-		// make sure there is something to be preloaded
-		if ( !empty( $preloadData ) ) {
-			// make the Link directives
-			$preloadLinks = array_map( [ PreloadLinkGenerator::class, 'generatePreloadLink' ], $preloadData );
-			// add them
-			foreach ( $preloadLinks as $preloadLink ) {
-				$outputPage->addLinkHeader( $preloadLink );
+		// get all the Link headers
+		foreach ( ( $parserOutput->getExtensionData( LinkHeaderFunction::DATA_KEY ) ?: [] ) as $linkHeader ) {
+			$outputPage->addLinkHeader( $linkHeader );
+		}
+	}
+
+	/**
+	 * Filter the edits for RawCSS style sheets to make sure it can compile
+	 * @param IContextSource $context
+	 * @param Content $content
+	 * @param Status $status
+	 * @param string $summary
+	 * @param User $user
+	 * @param bool $minoredit
+	 * @return mixed
+	 */
+	public function onEditFilterMergedContent( IContextSource $context, Content $content, Status $status,
+											   $summary, $user, $minoredit ): bool {
+		if ( $context->getTitle()->getNamespace() == NS_RAWCSS ) {
+			try {
+				$this->rawCssFunction->templateEngine->writeLatteTemplate( $context->getTitle(), null, $content );
+			} catch ( Throwable $exception ) {
+				$status->fatal( 'rawcss-style-sheet-rendering-failed', $exception->getMessage() );
+				return false;
 			}
 		}
+		return true;
 	}
 
 	/**
@@ -93,7 +125,9 @@ class Hooks implements ParserFirstCallInitHook, OutputPageParserOutputHook, Page
 	public function onPageSaveComplete( $wikiPage, $user, $summary, $flags, $revisionRecord, $editResult ): void {
 		// make sure this is a RawCSS style sheet
 		if ( $wikiPage->getNamespace() == NS_RAWCSS ) {
-			$this->rawCss->templateEngine->writeLatteTemplate( $wikiPage );
+			$this->rawCssFunction->templateEngine->writeLatteTemplate(
+				$wikiPage->getTitle(), $wikiPage->getRevisionRecord(), $wikiPage->getContent()
+			);
 
 			if ( $this->extensionConfig->get( 'RawCSSPurgeOnStyleSheetEdit' ) ) {
 				// select backlinks of the style sheet (where the style sheet is linked)
