@@ -13,6 +13,21 @@ A MediaWiki extension which allows for the transclusion of raw (templated) CSS f
 |  `$wgRawCSSLatteSecurityPolicy`  | The [Latte security policy](https://latte.nette.org/en/sandbox) to use                                         | See `src/Utilities/TemplateEngine.php`      |
 | `$wgRawCSSPurgeOnStyleSheetEdit` | If the pages which use a style sheet should be purged when that style sheet is edited                          | `true`                                      |
 
+### File backend
+
+`$wgRawCSSFileBackend` is *required* if you use an extension like [`AWS`](https://www.mediawiki.org/wiki/Extension:AWS). An example config would be:
+```php
+$wgAWSRepoZones['rawcss-renderer'] = [
+	'container' => 'rawcss-renderer',
+	'path'      => '/rawcss-renderer',
+	'isPublic'  => true
+];
+```
+
+### Security policy
+
+If you want to use a custom security policy, please see the [Latte security policy](https://latte.nette.org/en/sandbox) page.
+
 ## User guide
 
 ### Simple
