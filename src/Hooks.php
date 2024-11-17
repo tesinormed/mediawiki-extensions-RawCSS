@@ -3,10 +3,10 @@
 namespace MediaWiki\Extension\RawCSS;
 
 use Content;
+use FileBackendGroup;
 use MediaWiki\Config\Config;
 use MediaWiki\Config\ConfigFactory;
 use MediaWiki\Context\IContextSource;
-use MediaWiki\Extension\RawCSS\Parser\LinkHeaderFunction;
 use MediaWiki\Extension\RawCSS\Parser\RawCssFunction;
 use MediaWiki\Hook\EditFilterMergedContentHook;
 use MediaWiki\Hook\ParserFirstCallInitHook;
@@ -35,7 +35,6 @@ class Hooks implements
 	private Config $mainConfig;
 	private Config $extensionConfig;
 	private RawCssFunction $rawCssFunction;
-	private LinkHeaderFunction $linkHeaderFunction;
 	private IConnectionProvider $databaseProvider;
 	private LinkTargetLookup $linkTargetLookup;
 	private WikiPageFactory $wikiPageFactory;
@@ -44,12 +43,12 @@ class Hooks implements
 		ConfigFactory $configFactory,
 		IConnectionProvider $databaseProvider,
 		LinkTargetLookup $linkTargetLookup,
-		WikiPageFactory $wikiPageFactory
+		WikiPageFactory $wikiPageFactory,
+		FileBackendGroup $fileBackendGroup,
 	) {
 		$this->mainConfig = $configFactory->makeConfig( 'main' );
 		$this->extensionConfig = $configFactory->makeConfig( 'rawcss' );
-		$this->rawCssFunction = new RawCssFunction( $this->mainConfig, $this->extensionConfig );
-		$this->linkHeaderFunction = new LinkHeaderFunction();
+		$this->rawCssFunction = new RawCssFunction( $this->mainConfig, $this->extensionConfig, $fileBackendGroup );
 		$this->databaseProvider = $databaseProvider;
 		$this->linkTargetLookup = $linkTargetLookup;
 		$this->wikiPageFactory = $wikiPageFactory;
@@ -65,27 +64,18 @@ class Hooks implements
 			[ $this->rawCssFunction, 'onFunctionHook' ],
 			Parser::SFH_OBJECT_ARGS
 		);
-		$parser->setFunctionHook( 'linkheader',
-			[ $this->linkHeaderFunction, 'onFunctionHook' ],
-			Parser::SFH_OBJECT_ARGS
-		);
 	}
 
 	/**
-	 * Appends the stylesheets and preload link header from the parser data
+	 * Appends the rendered style sheet file URLs to the output page
 	 * @param OutputPage $outputPage
 	 * @param ParserOutput $parserOutput
 	 * @return void
 	 */
 	public function onOutputPageParserOutput( $outputPage, $parserOutput ): void {
 		// add inline styles for each compiled style sheet
-		foreach ( ( $parserOutput->getExtensionData( RawCssFunction::DATA_KEY ) ?: [] ) as $styleSheet ) {
-			$outputPage->addInlineStyle( $styleSheet );
-		}
-
-		// get all the Link headers
-		foreach ( ( $parserOutput->getExtensionData( LinkHeaderFunction::DATA_KEY ) ?: [] ) as $linkHeader ) {
-			$outputPage->addLinkHeader( $linkHeader );
+		foreach ( ( $parserOutput->getExtensionData( RawCssFunction::DATA_KEY ) ?: [] ) as $styleSheetUrl ) {
+			$outputPage->addLink( [ 'rel' => 'stylesheet', 'href' => $styleSheetUrl ] );
 		}
 	}
 

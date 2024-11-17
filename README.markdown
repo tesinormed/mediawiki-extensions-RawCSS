@@ -6,11 +6,12 @@ A MediaWiki extension which allows for the transclusion of raw (templated) CSS f
 
 ## System administrator guide
 
-|       Configuration option       | Description                                                                           | Default                                |
-|:--------------------------------:|---------------------------------------------------------------------------------------|----------------------------------------|
-|    `$wgRawCSSLatteCachePath`     | The path for Latte to put its templates                                               | `$wgCacheDirectory/RawCSS/Latte`       |
-| `$wgRawCSSPurgeOnStyleSheetEdit` | If the pages which use a style sheet should be purged when that style sheet is edited | `true`                                 |
-|  `$wgRawCSSLatteSecurityPolicy`  | The [Latte security policy](https://latte.nette.org/en/sandbox) to use                | See `src/Utilities/TemplateEngine.php` |
+|       Configuration option       | Description                                                                                                    | Default                                     |
+|:--------------------------------:|----------------------------------------------------------------------------------------------------------------|---------------------------------------------|
+|    `$wgRawCSSLatteCachePath`     | The path for Latte to put its templates                                                                        | `$wgCacheDirectory/RawCSS/Latte`            |
+|      `$wgRawCSSFileBackend`      | The [file backend](https://www.mediawiki.org/wiki/Manual:$wgFileBackends) to use for the rendered style sheets | See `src/Utilities/RendererFileBackend.php` |
+|  `$wgRawCSSLatteSecurityPolicy`  | The [Latte security policy](https://latte.nette.org/en/sandbox) to use                                         | See `src/Utilities/TemplateEngine.php`      |
+| `$wgRawCSSPurgeOnStyleSheetEdit` | If the pages which use a style sheet should be purged when that style sheet is edited                          | `true`                                      |
 
 ## User guide
 

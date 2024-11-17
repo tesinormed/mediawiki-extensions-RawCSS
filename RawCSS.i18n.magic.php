@@ -10,5 +10,4 @@ $magicWords = [];
 /** English */
 $magicWords['en'] = [
 	'rawcss' => [ 0, 'rawcss' ],
-	'linkheader' => [ 0, 'linkheader' ],
 ];

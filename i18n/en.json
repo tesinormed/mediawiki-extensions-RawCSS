@@ -9,7 +9,6 @@
 	"right-editrawcss": "Create and edit raw CSS in the <code>{{ns:RawCSS}}</code> namespace",
 	"rawcss-page-error-category": "Pages with RawCSS errors",
 	"rawcss-style-sheet-invalid": "Invalid style sheet to load in the <code>rawcss</code> parser function.",
-	"rawcss-style-sheet-not-found": "Style sheet [[:$1|$2]] not found for the <code>rawcss</code> parser function.",
-	"rawcss-style-sheet-rendering-failed": "RawCSS style sheet was unable to be rendered: $1.",
-	"rawcss-link-header-invalid-url": "Invalid URL passed to the <code>linkheader</code> parser function: $1."
+	"rawcss-style-sheet-not-found": "Style sheet [[:$1|$2]] could not be not found for the <code>rawcss</code> parser function.",
+	"rawcss-style-sheet-rendering-failed": "RawCSS style sheet was unable to be rendered: $1."
 }

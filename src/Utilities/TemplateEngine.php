@@ -45,8 +45,7 @@ class TemplateEngine {
 	}
 
 	private function createLattePolicy(): SecurityPolicy {
-		if ( $this->extensionConfig->has( 'RawCSSLatteSecurityPolicy' )
-			&& !empty( $this->extensionConfig->get( 'RawCSSLatteSecurityPolicy' ) ) ) {
+		if ( !empty( $this->extensionConfig->get( 'RawCSSLatteSecurityPolicy' ) ) ) {
 			return $this->extensionConfig->get( 'RawCSSLatteSecurityPolicy' );
 		} else {
 			return SecurityPolicy::createSafePolicy();
