@@ -2,140 +2,164 @@
 
 namespace MediaWiki\Extension\RawCSS;
 
-use Content;
-use FileBackendGroup;
+use ExtensionRegistry;
+use ManualLogEntry;
 use MediaWiki\Config\Config;
 use MediaWiki\Config\ConfigFactory;
-use MediaWiki\Context\IContextSource;
-use MediaWiki\Extension\RawCSS\Parser\RawCssFunction;
-use MediaWiki\Hook\EditFilterMergedContentHook;
-use MediaWiki\Hook\ParserFirstCallInitHook;
-use MediaWiki\Linker\LinkTargetLookup;
-use MediaWiki\Output\Hook\OutputPageParserOutputHook;
+use MediaWiki\Output\Hook\BeforePageDisplayHook;
 use MediaWiki\Output\OutputPage;
-use MediaWiki\Page\WikiPageFactory;
-use MediaWiki\Parser\Parser;
-use MediaWiki\Parser\ParserOutput;
+use MediaWiki\Page\Hook\PageDeleteCompleteHook;
+use MediaWiki\Page\ProperPageIdentity;
+use MediaWiki\Permissions\Authority;
+use MediaWiki\ResourceLoader\Hook\ResourceLoaderRegisterModulesHook;
+use MediaWiki\ResourceLoader\ResourceLoader;
+use MediaWiki\Revision\Hook\ContentHandlerDefaultModelForHook;
+use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
-use MediaWiki\Status\Status;
 use MediaWiki\Storage\EditResult;
 use MediaWiki\Storage\Hook\PageSaveCompleteHook;
-use MediaWiki\Title\TitleValue;
-use MediaWiki\User\User;
-use Throwable;
+use MediaWiki\Title\Title;
+use MediaWiki\User\UserIdentity;
+use RuntimeException;
+use Skin;
+use WANObjectCache;
 use Wikimedia\Rdbms\IConnectionProvider;
 use WikiPage;
 
 class Hooks implements
-	ParserFirstCallInitHook,
-	OutputPageParserOutputHook,
-	EditFilterMergedContentHook,
-	PageSaveCompleteHook
+	ContentHandlerDefaultModelForHook,
+	ResourceLoaderRegisterModulesHook,
+	BeforePageDisplayHook,
+	PageSaveCompleteHook,
+	PageDeleteCompleteHook
 {
-	private Config $mainConfig;
 	private Config $extensionConfig;
-	private RawCssFunction $rawCssFunction;
-	private IConnectionProvider $databaseProvider;
-	private LinkTargetLookup $linkTargetLookup;
-	private WikiPageFactory $wikiPageFactory;
+	private ApplicationRepository $applicationRepository;
 
 	public function __construct(
 		ConfigFactory $configFactory,
+		RevisionLookup $revisionLookup,
 		IConnectionProvider $databaseProvider,
-		LinkTargetLookup $linkTargetLookup,
-		WikiPageFactory $wikiPageFactory,
-		FileBackendGroup $fileBackendGroup,
+		WANObjectCache $wanCache
 	) {
-		$this->mainConfig = $configFactory->makeConfig( 'main' );
 		$this->extensionConfig = $configFactory->makeConfig( 'rawcss' );
-		$this->rawCssFunction = new RawCssFunction( $this->mainConfig, $this->extensionConfig, $fileBackendGroup );
-		$this->databaseProvider = $databaseProvider;
-		$this->linkTargetLookup = $linkTargetLookup;
-		$this->wikiPageFactory = $wikiPageFactory;
+		$this->applicationRepository = new ApplicationRepository( $revisionLookup, $databaseProvider, $wanCache );
 	}
 
-	/**
-	 * Registers the function hook for the 'rawcss' parser function
-	 * @param Parser $parser
-	 * @return void
-	 */
-	public function onParserFirstCallInit( $parser ): void {
-		$parser->setFunctionHook( 'rawcss',
-			[ $this->rawCssFunction, 'onFunctionHook' ],
-			Parser::SFH_OBJECT_ARGS
-		);
-	}
-
-	/**
-	 * Appends the rendered style sheet file URLs to the output page
-	 * @param OutputPage $outputPage
-	 * @param ParserOutput $parserOutput
-	 * @return void
-	 */
-	public function onOutputPageParserOutput( $outputPage, $parserOutput ): void {
-		// add inline styles for each compiled style sheet
-		foreach ( ( $parserOutput->getExtensionData( RawCssFunction::DATA_KEY ) ?: [] ) as $styleSheetUrl ) {
-			$outputPage->addLink( [ 'rel' => 'stylesheet', 'href' => $styleSheetUrl ] );
-		}
-	}
-
-	/**
-	 * Filter the edits for RawCSS style sheets to make sure it can compile
-	 * @param IContextSource $context
-	 * @param Content $content
-	 * @param Status $status
-	 * @param string $summary
-	 * @param User $user
-	 * @param bool $minoredit
-	 * @return mixed
-	 */
-	public function onEditFilterMergedContent( IContextSource $context, Content $content, Status $status,
-											   $summary, $user, $minoredit ): bool {
-		if ( $context->getTitle()->getNamespace() == NS_RAWCSS ) {
-			try {
-				$this->rawCssFunction->templateEngine->writeLatteTemplate( $context->getTitle(), null, $content );
-			} catch ( Throwable $exception ) {
-				$status->fatal( 'rawcss-style-sheet-rendering-failed', $exception->getMessage() );
-				return false;
+	/** @noinspection PhpUnused */
+	public static function onRegistration(): void {
+		define( 'CONTENT_MODEL_RAWCSS_APPLICATION_LIST', 'rawcss-application-list' );
+		if ( ExtensionRegistry::getInstance()->isLoaded( 'TemplateStyles' ) ) {
+			global $wgRawCSSSetCSSContentModel;
+			global $wgTemplateStylesNamespaces;
+			if ( $wgRawCSSSetCSSContentModel && $wgTemplateStylesNamespaces[NS_TEMPLATE] ) {
+				throw new RuntimeException(
+					'$wgRawCSSSetCSSContentModel requires $wgTemplateStylesNamespaces[NS_TEMPLATE] to be false'
+				);
 			}
 		}
+	}
+
+	/**
+	 * Sets the content model for MediaWiki:RawCSS-applications.json to
+	 * <code>ApplicationListContentHandler::MODEL_ID</code> and
+	 * @param Title $title
+	 * @param string &$model
+	 * @return bool
+	 */
+	public function onContentHandlerDefaultModelFor( $title, &$model ): bool {
+		if ( $title->getNamespace() == NS_MEDIAWIKI && $title->getText() == ApplicationRepository::LIST_PAGE_TITLE ) {
+			$model = CONTENT_MODEL_RAWCSS_APPLICATION_LIST;
+			return false;
+		}
+
+		if ( $this->extensionConfig->get( 'RawCSSSetCSSContentModel' )
+			&& $title->getNamespace() == NS_TEMPLATE
+			&& str_ends_with( $title->getText(), '.css' ) ) {
+			$model = CONTENT_MODEL_CSS;
+			return false;
+		}
+
 		return true;
 	}
 
 	/**
-	 * Updates the template file on page edit and (optionally) purges the pages which link to the RawCSS style sheet
+	 * @param ResourceLoader $rl
+	 * @return void
+	 */
+	public function onResourceLoaderRegisterModules( ResourceLoader $rl ): void {
+		foreach ( $this->applicationRepository->getApplicationIds() as $id ) {
+			$rl->register( 'ext.rawcss.' . $id, [
+				'class' => ApplicationResourceLoaderModule::class,
+				'id' => $id,
+			] );
+		}
+	}
+
+	/**
+	 * @param OutputPage $out
+	 * @param Skin $skin
+	 * @return void
+	 */
+	public function onBeforePageDisplay( $out, $skin ): void {
+		$matchingTemplateCount = 0;
+		if ( $out->getTemplateIds() !== null && array_key_exists( NS_TEMPLATE, $out->getTemplateIds() ) ) {
+			foreach ( $out->getTemplateIds()[NS_TEMPLATE] as $dbKey => $revisionId ) {
+				$title = Title::newFromDBkey( $dbKey );
+
+				if ( $this->applicationRepository->getApplicationById( $title->getArticleID() ) ) {
+					$matchingTemplateCount++;
+					$out->addModuleStyles( 'ext.rawcss.' . $title->getArticleID() );
+				}
+			}
+		}
+
+		if ( $matchingTemplateCount == 0 && $this->applicationRepository->getApplicationById( 0 ) !== null ) {
+			$out->addModuleStyles( 'ext.rawcss.0' );
+		}
+	}
+
+	/**
+	 * Runs the application repository page update hook
 	 * @param WikiPage $wikiPage
-	 * @param User $user
+	 * @param UserIdentity $user
 	 * @param string $summary
 	 * @param int $flags
 	 * @param RevisionRecord $revisionRecord
 	 * @param EditResult $editResult
 	 * @return void
 	 */
-	public function onPageSaveComplete( $wikiPage, $user, $summary, $flags, $revisionRecord, $editResult ): void {
-		// make sure this is a RawCSS style sheet
-		if ( $wikiPage->getNamespace() == NS_RAWCSS ) {
-			$this->rawCssFunction->templateEngine->writeLatteTemplate(
-				$wikiPage->getTitle(), $wikiPage->getRevisionRecord(), $wikiPage->getContent()
-			);
+	public function onPageSaveComplete(
+		$wikiPage,
+		$user,
+		$summary,
+		$flags,
+		$revisionRecord,
+		$editResult
+	): void {
+		$this->applicationRepository->onPageUpdate( $wikiPage );
+	}
 
-			if ( $this->extensionConfig->get( 'RawCSSPurgeOnStyleSheetEdit' ) ) {
-				// select backlinks of the style sheet (where the style sheet is linked)
-				$replicaDatabase = $this->databaseProvider->getReplicaDatabase();
-				$linkTargetId = $this->linkTargetLookup->getLinkTargetId( TitleValue::newFromPage( $wikiPage ) );
-				$linkingPageIds = $replicaDatabase->newSelectQueryBuilder()
-					->select( 'tl_from' )
-					->from( 'templatelinks' )
-					->where( [ 'tl_target_id' => $linkTargetId ] )
-					->caller( __METHOD__ )
-					->fetchFieldValues();
-				foreach ( $linkingPageIds as $linkingPageId ) {
-					// get the page linking to the style sheet
-					$linkingPage = $this->wikiPageFactory->newFromID( $linkingPageId );
-					// purge to forcibly refresh
-					$linkingPage->doPurge();
-				}
-			}
-		}
+	/**
+	 * Runs the application repository page update hook
+	 * @param ProperPageIdentity $page
+	 * @param Authority $deleter
+	 * @param string $reason
+	 * @param int $pageID
+	 * @param RevisionRecord $deletedRev
+	 * @param ManualLogEntry $logEntry
+	 * @param int $archivedRevisionCount
+	 * @return void
+	 */
+	public function onPageDeleteComplete(
+		ProperPageIdentity $page,
+		Authority $deleter,
+		string $reason,
+		int $pageID,
+		RevisionRecord $deletedRev,
+		ManualLogEntry $logEntry,
+		int $archivedRevisionCount
+	): void {
+		$this->applicationRepository->onPageUpdate( $page );
 	}
 }

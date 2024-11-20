@@ -1,34 +1,27 @@
 {
 	"name": "RawCSS",
-	"version": "0.4.0",
+	"version": "0.5.0",
 	"author": [
 		"tesinormed"
 	],
 	"url": "https://www.mediawiki.org/wiki/Extension:RawCSS",
 	"descriptionmsg": "rawcss-desc",
 	"license-name": "CC0-1.0",
-	"type": "parserhook",
+	"type": "other",
 	"requires": {
-		"MediaWiki": ">= 1.42.0"
+		"MediaWiki": ">= 1.42.0",
+		"platform": {
+			"php": ">= 8.1"
+		}
 	},
 	"ExtensionMessagesFiles": {
-		"RawCSSMagic": "RawCSS.i18n.magic.php",
 		"RawCSSNamespaces": "RawCSS.i18n.namespaces.php"
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\RawCSS\\": "src/"
 	},
 	"config": {
-		"RawCSSLatteCacheDirectory": {
-			"value": false
-		},
-		"RawCSSLatteSecurityPolicy": {
-			"value": false
-		},
-		"RawCSSFileBackend": {
-			"value": false
-		},
-		"RawCSSPurgeOnStyleSheetEdit": {
+		"RawCSSSetCSSContentModel": {
 			"value": true
 		}
 	},
@@ -50,24 +43,35 @@
 			"subpages": true
 		}
 	],
+	"ContentHandlers": {
+		"rawcss-application-list": "MediaWiki\\Extension\\RawCSS\\ApplicationListContentHandler"
+	},
 	"HookHandlers": {
 		"main": {
 			"class": "MediaWiki\\Extension\\RawCSS\\Hooks",
 			"services": [
 				"ConfigFactory",
+				"RevisionLookup",
 				"ConnectionProvider",
-				"LinkTargetLookup",
-				"WikiPageFactory",
-				"FileBackendGroup"
+				"MainWANObjectCache"
 			]
+		},
+		"codeeditor": {
+			"class": "MediaWiki\\Extension\\RawCSS\\CodeEditorHooks"
 		}
 	},
 	"Hooks": {
-		"ParserFirstCallInit": "main",
-		"OutputPageParserOutput": "main",
-		"EditFilterMergedContent": "main",
-		"PageSaveComplete": "main"
+		"ContentHandlerDefaultModelFor": "main",
+		"CodeEditorGetPageLanguage": "codeeditor",
+		"ResourceLoaderRegisterModules": "main",
+		"BeforePageDisplay": "main",
+		"PageSaveComplete": "main",
+		"PageDeleteComplete": "main"
 	},
+	"callback": "MediaWiki\\Extension\\RawCSS\\Hooks::onRegistration",
+	"ServiceWiringFiles": [
+		"src/ServiceWiring.php"
+	],
 	"AvailableRights": [
 		"editrawcss"
 	],

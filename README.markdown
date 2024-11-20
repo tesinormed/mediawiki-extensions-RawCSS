@@ -1,86 +1,75 @@
 # RawCSS
 
-## Description
-
-A MediaWiki extension which allows for the transclusion of raw (templated) CSS from the RawCSS namespace into the `<head>` of pages.
+A MediaWiki extension which allows for the transclusion of raw CSS from the RawCSS namespace into pages
 
 ## System administrator guide
 
-|       Configuration option       | Description                                                                                                    | Default                                     |
-|:--------------------------------:|----------------------------------------------------------------------------------------------------------------|---------------------------------------------|
-|    `$wgRawCSSLatteCachePath`     | The path for Latte to put its templates                                                                        | `$wgCacheDirectory/RawCSS/Latte`            |
-|      `$wgRawCSSFileBackend`      | The [file backend](https://www.mediawiki.org/wiki/Manual:$wgFileBackends) to use for the rendered style sheets | See `src/Utilities/RendererFileBackend.php` |
-|  `$wgRawCSSLatteSecurityPolicy`  | The [Latte security policy](https://latte.nette.org/en/sandbox) to use                                         | See `src/Utilities/TemplateEngine.php`      |
-| `$wgRawCSSPurgeOnStyleSheetEdit` | If the pages which use a style sheet should be purged when that style sheet is edited                          | `true`                                      |
+|     Configuration option      | Description                                                                                                  | Default |
+|:-----------------------------:|--------------------------------------------------------------------------------------------------------------|---------|
+| `$wgRawCSSSetCSSContentModel` | Set the default content model for any page in the Template namespace ending in `.css` to `CONTENT_MODEL_CSS` | `true`  |
 
-### File backend
+### Added namespace (RawCSS)
 
-`$wgRawCSSFileBackend` is *required* if you use an extension like [`AWS`](https://www.mediawiki.org/wiki/Extension:AWS). An example config would be:
-```php
-$wgAWSRepoZones['rawcss-renderer'] = [
-	'container' => 'rawcss-renderer',
-	'path'      => '/rawcss-renderer',
-	'isPublic'  => true
-];
-```
+- The ID is `6200` (and `6201` for the talk pages)
+- The default content model is `css`
+- The permissions required are:
+	- `editrawcss`
 
-### Security policy
+### Added permission (`editrawcss`)
 
-If you want to use a custom security policy, please see the [Latte security policy](https://latte.nette.org/en/sandbox) page.
+- The default groups denied this permission are:
+	- `*`
+- The default groups allowed this permission are:
+	- `interface-admin`
+- The default grants which give this permission are:
+	- `editsiteconfig`
+
+### Conflict with [TemplateStyles](https://www.mediawiki.org/wiki/Extension:TemplateStyles)
+
+If `$wgRawCSSSetCSSContentModel` is set to `true` (by default),
+you must disable `$wgTemplateStylesNamespaces[NS_TEMPLATE]` by setting it to `false` in [`LocalSettings.php`](https://www.mediawiki.org/wiki/Manual:LocalSettings.php).
 
 ## User guide
 
-### Simple
+Create a page called `MediaWiki:RawCSS-applications.json` with a general format like this:
 
-To set up a simple style sheet, add your CSS into a page in the RawCSS namespace and reference it using `{{#rawcss:PageName}}`.
-
-### Parameters
-
-Passing parameters is like using a template; `{{#rawcss:PageName|arg1=value1|arg2=param2}}`.
-
-To use these parameters in your CSS, simply add `{$arg1}`.
-
-Getting errors from the syntax checker? Surround it in `/**/` (`/*{$arg1}*/`).
-
-Another trick you may use (which is helpful for colors) is by prefixing it with `/*whatever*/unset` (like `/*#*/unset/*{$color}*/`).
-This will become `#{$color}`.
-
-> [!NOTE]
-> Both of these tricks will be removed when it is used on a page; it will not be removed in the source style sheet.
-
-If you need to add anything with escaped characters, like "#" or "/", you may either use `noescape` (like `{$color|noescape}`) or use the `unset` trick.
-
-> [!WARNING]
-> Be careful when you use `noescape`; this entirely disables escaping of input,
-> which [could be dangerous for your wiki's security](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html).
-
-> [!IMPORTANT]
-> Spaces are not allowed *within the space between `/*` and `{` for tricks*.
-> For example, `/*{$arg1}*/` and `/*{=$arg1 . $arg2}*/` would work, while `/* {$arg1} */` would not.
-
-### Preloading assets
-
-If you need to preload assets (like images or fonts), simply use the following *in the page*:
-
-```
-{{#linkheader:https://example.com|as=image|type=image/png}}
-```
-
-In the above, the URL is the link to the asset, `as` is the type of asset, and `type` is the MIME type of the asset file.
-These parameters match [the `Link` header's parameters](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Link).
-
-### Example style sheet
-
-```css
-/*{default $color = ff0072}*/
-body {
-	background-repeat: no-repeat;
-	background-position: center;
-	background-size: cover;
-	background-image: url('{$background_image|checkUrl}');
-}
-
-a {
-	color: /*#*/ unset /*{$color}*/
+```json
+{
+	"Template:Apple": {
+		"coatings": [
+			"RawCSS:Apple styling"
+		],
+		"variables": {
+			"color-apple": "ff007a"
+		},
+		"preload": [
+			{
+				"href": "https://example.com/",
+				"as": "image"
+			}
+		]
+	}
 }
 ```
+
+### `MediaWiki:RawCSS-applications.json` schema
+
+The general format of `MediaWiki:RawCSS-applications.json` is:
+
+- The top-level JSON data type must be an object (the file must start with `{` and end with `}`)
+- Each top-level property must be the name of a template (with or without the `Template:` prefix)
+- The `coatings` property must be a list of coating pages (either in the `RawCSS` or `Template` namespaces, with the content model set to `css`)
+- The `variables` property must be an object of CSS variables to set (don't prepend the name with `--`)
+- The `preload` property must be a list of objects which must have the `href` and `as` properties set
+	- `href` must be a valid URL
+
+### Styling a template
+
+1. Create a template with any content; it doesn't matter.
+2. Create a CSS page, either in the RawCSS or Template namespaces.
+3. Create or edit the `MediaWiki:RawCSS-applications.json` with something like [the above snippet](#user-guide) (if your template is `Template:Apple` and your coating is `RawCSS:Apple styling`)
+
+### Additional notes
+
+- If you need to set a CSS variable, add the `variables` property with something like [the above snippet](#user-guide).
+- If you need to add something to be preloaded, add the `preload` property with something like [the above snippet](#user-guide).
