@@ -102,23 +102,42 @@ class Hooks implements
 	 * @return void
 	 */
 	public function onBeforePageDisplay( $out, $skin ): void {
-		$moduleStyles = [];
+		$moduleNames = [];
 
-		if ( array_key_exists( NS_TEMPLATE, $out->getTemplateIds() ) ) {
-			foreach ( $out->getTemplateIds()[NS_TEMPLATE] as $dbKey => $revisionId ) {
-				$title = Title::makeTitle( NS_TEMPLATE, $dbKey );
+		if ( $out->getTitle()->getNamespace() != NS_TEMPLATE ) {
+			if ( array_key_exists( NS_TEMPLATE, $out->getTemplateIds() ) ) {
+				foreach ( $out->getTemplateIds()[NS_TEMPLATE] as $dbKey => $revisionId ) {
+					$title = Title::makeTitle( NS_TEMPLATE, $dbKey );
 
-				if ( $this->applicationRepository->getApplicationById( $title->getArticleID() ) ) {
-					$moduleStyles[] = 'ext.rawcss.' . $title->getArticleID();
+					if ( $this->applicationRepository->getApplicationById( $title->getArticleID() ) ) {
+						$moduleNames[] = 'ext.rawcss.' . $title->getArticleID();
+					}
 				}
+			}
+		} else {
+			if ( $this->applicationRepository->getApplicationById( $out->getTitle()->getArticleID() ) ) {
+				$moduleNames[] = 'ext.rawcss.' . $out->getTitle()->getArticleID();
 			}
 		}
 
-		if ( empty( $moduleStyles ) && $this->applicationRepository->getApplicationById( 0 ) !== null ) {
-			$moduleStyles[] = 'ext.rawcss.0';
+		if ( empty( $moduleNames ) && $this->applicationRepository->getApplicationById( 0 ) !== null ) {
+			$moduleNames[] = 'ext.rawcss.0';
 		}
 
-		$out->addModuleStyles( $moduleStyles );
+		$out->addModuleStyles( $moduleNames );
+
+		foreach ( $moduleNames as $moduleName ) {
+			/** @var ApplicationResourceLoaderModule $module */
+			$module = $out->getResourceLoader()->getModule( $moduleName );
+
+			foreach ( $module->getApplication()['preload'] as $href => $preloadDirective ) {
+				$out->addLink( [
+					'rel' => 'preload',
+					'href' => $href,
+					...$preloadDirective
+				] );
+			}
+		}
 	}
 
 	/**

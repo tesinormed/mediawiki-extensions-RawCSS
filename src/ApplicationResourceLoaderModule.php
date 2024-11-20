@@ -20,7 +20,7 @@ class ApplicationResourceLoaderModule extends WikiModule {
 		$this->titleFormatter = MediaWikiServices::getInstance()->getTitleFormatter();
 	}
 
-	private function getApplication(): array {
+	public function getApplication(): array {
 		return $this->applicationRepository->getApplicationById( $this->id );
 	}
 
@@ -43,10 +43,6 @@ class ApplicationResourceLoaderModule extends WikiModule {
 		array_unshift( $styles['all'], $renderedVariables );
 
 		return $styles;
-	}
-
-	protected function getPreloadLinks( Context $context ): array {
-		return $this->getApplication()['preload'];
 	}
 
 	public function getType(): string {
