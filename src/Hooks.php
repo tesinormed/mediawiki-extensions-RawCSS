@@ -102,21 +102,23 @@ class Hooks implements
 	 * @return void
 	 */
 	public function onBeforePageDisplay( $out, $skin ): void {
-		$matchingTemplateCount = 0;
-		if ( $out->getTemplateIds() !== null && array_key_exists( NS_TEMPLATE, $out->getTemplateIds() ) ) {
+		$moduleStyles = [];
+
+		if ( array_key_exists( NS_TEMPLATE, $out->getTemplateIds() ) ) {
 			foreach ( $out->getTemplateIds()[NS_TEMPLATE] as $dbKey => $revisionId ) {
 				$title = Title::newFromDBkey( $dbKey );
 
 				if ( $this->applicationRepository->getApplicationById( $title->getArticleID() ) ) {
-					$matchingTemplateCount++;
-					$out->addModuleStyles( 'ext.rawcss.' . $title->getArticleID() );
+					$moduleStyles[] = 'ext.rawcss.' . $title->getArticleID();
 				}
 			}
 		}
 
-		if ( $matchingTemplateCount == 0 && $this->applicationRepository->getApplicationById( 0 ) !== null ) {
-			$out->addModuleStyles( 'ext.rawcss.0' );
+		if ( count( $moduleStyles ) == 0 && $this->applicationRepository->getApplicationById( 0 ) !== null ) {
+			$moduleStyles[] = 'ext.rawcss.null';
 		}
+
+		$out->addModuleStyles( $moduleStyles );
 	}
 
 	/**
@@ -137,7 +139,7 @@ class Hooks implements
 		$revisionRecord,
 		$editResult
 	): void {
-		$this->applicationRepository->onPageUpdate( $wikiPage );
+		$this->applicationRepository->onPageUpdate( $wikiPage->getTitle() );
 	}
 
 	/**
@@ -160,6 +162,6 @@ class Hooks implements
 		ManualLogEntry $logEntry,
 		int $archivedRevisionCount
 	): void {
-		$this->applicationRepository->onPageUpdate( $page );
+		$this->applicationRepository->onPageUpdate( Title::newFromPageIdentity( $page ) );
 	}
 }

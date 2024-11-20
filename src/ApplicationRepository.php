@@ -2,7 +2,6 @@
 
 namespace MediaWiki\Extension\RawCSS;
 
-use MediaWiki\Page\PageIdentity;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\SlotRecord;
 use MediaWiki\Title\Title;
@@ -75,6 +74,7 @@ class ApplicationRepository {
 			},
 			[
 				'version' => ApplicationListContent::SCHEMA_VERSION,
+				'checkKeys' => [ $this->getCacheKey() ],
 				'lockTSE' => 30,
 				'pcTTL' => $this->wanCache::TTL_PROC_LONG,
 			]
@@ -82,11 +82,11 @@ class ApplicationRepository {
 	}
 
 	private function purgeCache(): void {
-		$this->wanCache->delete( $this->getCacheKey() );
+		$this->wanCache->touchCheckKey( $this->getCacheKey() );
 	}
 
-	public function onPageUpdate( PageIdentity $title ): void {
-		if ( $title->getNamespace() == NS_MEDIAWIKI && $title->getDBkey() === self::LIST_PAGE_TITLE ) {
+	public function onPageUpdate( Title $title ): void {
+		if ( $title->getNamespace() == NS_MEDIAWIKI && $title->getText() == self::LIST_PAGE_TITLE ) {
 			$this->purgeCache();
 		}
 	}

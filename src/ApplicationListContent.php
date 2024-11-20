@@ -98,7 +98,7 @@ class ApplicationListContent extends JsonContent {
 				}
 
 				// add the coating
-				$coatings[] = $coatingTitle->getPrefixedText();
+				$coatings[] = $coatingTitle->getArticleID();
 			}
 
 			$variables = [];

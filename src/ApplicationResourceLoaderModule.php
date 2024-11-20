@@ -5,15 +5,19 @@ namespace MediaWiki\Extension\RawCSS;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\ResourceLoader\Context;
 use MediaWiki\ResourceLoader\WikiModule;
+use MediaWiki\Title\Title;
+use MediaWiki\Title\TitleFormatter;
 
 class ApplicationResourceLoaderModule extends WikiModule {
 	private int $id;
 	private ApplicationRepository $applicationRepository;
+	private TitleFormatter $titleFormatter;
 
 	public function __construct( array $options ) {
 		parent::__construct();
 		$this->id = $options['id'];
 		$this->applicationRepository = MediaWikiServices::getInstance()->getService( 'RawCSS.ApplicationRepository' );
+		$this->titleFormatter = MediaWikiServices::getInstance()->getTitleFormatter();
 	}
 
 	private function getApplication(): array {
@@ -23,7 +27,7 @@ class ApplicationResourceLoaderModule extends WikiModule {
 	protected function getPages( Context $context ): array {
 		$pages = [];
 		foreach ( $this->getApplication()['coatings'] as $coating ) {
-			$pages[$coating] = [ 'type' => 'style' ];
+			$pages[$this->titleFormatter->getPrefixedDBkey( Title::newFromID( $coating ) )] = [ 'type' => 'style' ];
 		}
 		return $pages;
 	}
