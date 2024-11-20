@@ -114,7 +114,7 @@ class Hooks implements
 			}
 		}
 
-		if ( count( $moduleStyles ) == 0 && $this->applicationRepository->getApplicationById( 0 ) !== null ) {
+		if ( empty( $moduleStyles ) && $this->applicationRepository->getApplicationById( 0 ) !== null ) {
 			$moduleStyles[] = 'ext.rawcss.0';
 		}
 

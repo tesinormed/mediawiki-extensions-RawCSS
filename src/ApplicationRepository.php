@@ -31,14 +31,19 @@ class ApplicationRepository {
 	}
 
 	public function getApplicationIds(): array {
-		return array_map( static fn ( $application ) => $application['base'], $this->getApplications() );
+		return array_keys( $this->getApplications() );
 	}
 
 	public function getApplicationById( int $id ): ?array {
 		$filteredApplications = array_filter( $this->getApplications(),
-			static fn ( $application ) => $application['base'] == $id
+			static fn ( $applicationId ) => $applicationId == $id,
+			ARRAY_FILTER_USE_KEY
 		);
-		return count( $filteredApplications ) > 0 ? $filteredApplications[0] : null;
+		if ( !empty( $filteredApplications ) ) {
+			return $filteredApplications[$id];
+		} else {
+			return null;
+		}
 	}
 
 	public function getApplications(): array {
@@ -75,8 +80,7 @@ class ApplicationRepository {
 			[
 				'version' => ApplicationListContent::SCHEMA_VERSION,
 				'checkKeys' => [ $this->getCacheKey() ],
-				'lockTSE' => 30,
-				'pcTTL' => $this->wanCache::TTL_PROC_LONG,
+				'lockTSE' => 300,
 			]
 		);
 	}

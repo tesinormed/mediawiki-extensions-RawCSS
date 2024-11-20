@@ -36,7 +36,7 @@ class ApplicationListContent extends JsonContent {
 			// ignore base of * (default for any page without any templates that are bases)
 			if ( $base != '*' ) {
 				// make sure the base exists, isn't external, and is in the Template namespace
-				$baseTitle = Title::newFromText( $base, defaultNamespace: NS_TEMPLATE );
+				$baseTitle = Title::makeTitleSafe( NS_TEMPLATE, $base );
 				if ( !$baseTitle || !$baseTitle->exists()
 					|| $baseTitle->isExternal()
 					|| $baseTitle->getNamespace() != NS_TEMPLATE ) {
@@ -205,8 +205,7 @@ class ApplicationListContent extends JsonContent {
 				}
 			}
 
-			$applications[] = [
-				'base' => $basePageId,
+			$applications[$basePageId] = [
 				'coatings' => $coatings,
 				'variables' => $variables,
 				'preload' => $preloadDirectives
