@@ -106,7 +106,7 @@ class Hooks implements
 
 		if ( array_key_exists( NS_TEMPLATE, $out->getTemplateIds() ) ) {
 			foreach ( $out->getTemplateIds()[NS_TEMPLATE] as $dbKey => $revisionId ) {
-				$title = Title::newFromDBkey( $dbKey );
+				$title = Title::makeTitle( NS_TEMPLATE, $dbKey );
 
 				if ( $this->applicationRepository->getApplicationById( $title->getArticleID() ) ) {
 					$moduleStyles[] = 'ext.rawcss.' . $title->getArticleID();
@@ -115,7 +115,7 @@ class Hooks implements
 		}
 
 		if ( count( $moduleStyles ) == 0 && $this->applicationRepository->getApplicationById( 0 ) !== null ) {
-			$moduleStyles[] = 'ext.rawcss.null';
+			$moduleStyles[] = 'ext.rawcss.0';
 		}
 
 		$out->addModuleStyles( $moduleStyles );
