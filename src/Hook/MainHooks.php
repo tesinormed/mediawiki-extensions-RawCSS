@@ -129,22 +129,22 @@ class MainHooks implements
 		// ResourceLoader modules to load
 		$moduleNames = [];
 
-		// if the current page isn't a template
-		if ( $out->getTitle()->getNamespace() != NS_TEMPLATE ) {
-			// if there's any templates on this page
-			if ( array_key_exists( NS_TEMPLATE, $out->getTemplateIds() ) ) {
-				// go through each template
-				foreach ( $out->getTemplateIds()[NS_TEMPLATE] as $dbKey => $revisionId ) {
-					$title = Title::makeTitle( NS_TEMPLATE, $dbKey );
+		// if there's any templates on this page
+		if ( array_key_exists( NS_TEMPLATE, $out->getTemplateIds() ) ) {
+			// go through each template
+			foreach ( $out->getTemplateIds()[NS_TEMPLATE] as $dbKey => $revisionId ) {
+				$title = Title::makeTitle( NS_TEMPLATE, $dbKey );
 
-					// and see if there's an application under that ID
-					if ( $this->applicationRepository->getApplicationById( $title->getArticleID() ) ) {
-						// add the application ResourceLoader module
-						$moduleNames[] = 'ext.rawcss.' . $title->getArticleID();
-					}
+				// and see if there's an application under that ID
+				if ( $this->applicationRepository->getApplicationById( $title->getArticleID() ) ) {
+					// add the application ResourceLoader module
+					$moduleNames[] = 'ext.rawcss.' . $title->getArticleID();
 				}
 			}
-		} else {
+		}
+
+		// if this page is a template
+		if ( $out->getTitle()->getNamespace() == NS_TEMPLATE ) {
 			// if there's an application under that ID
 			if ( $this->applicationRepository->getApplicationById( $out->getTitle()->getArticleID() ) ) {
 				// add the application ResourceLoader module
