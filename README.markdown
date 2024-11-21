@@ -1,6 +1,6 @@
 # RawCSS
 
-A MediaWiki extension which allows for the transclusion of raw CSS from the RawCSS namespace into pages
+A MediaWiki extension which allows for the transclusion of raw CSS from the RawCSS or Template namespace into pages
 
 ## System administrator guide
 
@@ -11,7 +11,7 @@ A MediaWiki extension which allows for the transclusion of raw CSS from the RawC
 ### Added namespace (RawCSS)
 
 - The ID is `6200` (and `6201` for the talk pages)
-- The default content model is `css`
+- The default content model is `less`
 - The permissions required are:
 	- `editrawcss`
 
@@ -35,7 +35,7 @@ Create a page called `MediaWiki:RawCSS-applications.json` with a general format 
 
 ```json
 {
-	"Template:Apple": {
+	"Apple": {
 		"coatings": [
 			"RawCSS:Apple styling"
 		],
@@ -66,10 +66,11 @@ The general format of `MediaWiki:RawCSS-applications.json` is:
 ### Styling a template
 
 1. Create a template with any content; it doesn't matter.
-2. Create a CSS page, either in the RawCSS or Template namespaces.
+2. Create a page, either in the RawCSS ([Less](https://lesscss.org/) or CSS allowed) or Template (CSS only) namespaces.
 3. Create or edit the `MediaWiki:RawCSS-applications.json` with something like [the above snippet](#user-guide) (if your template is `Template:Apple` and your coating is `RawCSS:Apple styling`)
 
 ### Additional notes
 
-- If you need to set a CSS variable, add the `variables` property with something like [the above snippet](#user-guide).
+- If you need to set a Less variable, add the `variables` property with something like [the above snippet](#user-guide).
+- Setting CSS variables is not supported.
 - If you need to add something to be preloaded, add the `preload` property with something like [the above snippet](#user-guide).

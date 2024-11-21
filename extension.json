@@ -1,6 +1,6 @@
 {
 	"name": "RawCSS",
-	"version": "0.6.0",
+	"version": "0.6.1",
 	"author": [
 		"tesinormed"
 	],
@@ -56,10 +56,14 @@
 				"ConnectionProvider",
 				"MainWANObjectCache"
 			]
+		},
+		"codeeditor": {
+			"class": "MediaWiki\\Extension\\RawCSS\\CodeEditorHooks"
 		}
 	},
 	"Hooks": {
 		"ContentHandlerDefaultModelFor": "main",
+		"CodeEditorGetPageLanguage": "codeeditor",
 		"ResourceLoaderRegisterModules": "main",
 		"BeforePageDisplay": "main",
 		"PageSaveComplete": "main",

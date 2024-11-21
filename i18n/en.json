@@ -4,7 +4,7 @@
 			"tesinormed"
 		]
 	},
-	"rawcss-desc": "Allows for the transclusion of raw CSS from the {{ns:RawCSS}} namespace into pages",
+	"rawcss-desc": "Allows for the transclusion of raw CSS from the {{ns:RawCSS}} or {{ns:Template}} namespace into pages",
 	"action-editrawcss": "create and edit raw CSS",
 	"right-editrawcss": "Create and edit raw CSS in the <code>{{ns:RawCSS}}</code> namespace",
 	"rawcss-application-list-validation-invalid-data-type": "Invalid data type for <code>$1</code> (expected $2)",
