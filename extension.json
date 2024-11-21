@@ -1,6 +1,6 @@
 {
 	"name": "RawCSS",
-	"version": "0.6.1",
+	"version": "0.6.2",
 	"author": [
 		"tesinormed"
 	],
@@ -58,7 +58,7 @@
 			]
 		},
 		"codeeditor": {
-			"class": "MediaWiki\\Extension\\RawCSS\\CodeEditorHooks"
+			"class": "MediaWiki\\Extension\\RawCSS\\Hook\\CodeEditorHooks"
 		}
 	},
 	"Hooks": {
