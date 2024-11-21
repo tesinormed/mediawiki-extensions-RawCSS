@@ -10,7 +10,8 @@
 	"rawcss-application-list-validation-invalid-data-type": "Invalid data type for <code>$1</code> (expected $2)",
 	"rawcss-application-list-validation-missing-data": "Missing data at <code>$1</code>",
 	"rawcss-application-list-validation-invalid-base": "Invalid {{ns:Template}} base [[:$1|$2]]",
-	"rawcss-application-list-validation-invalid-coating": "Invalid {{ns:RawCSS}} coating [[:$1|$2]]",
-	"rawcss-application-list-validation-invalid-variable-name": "Invalid variable name for <code>$1</code>: <code>$2</code>",
-	"rawcss-application-list-validation-invalid-variable-value": "Invalid variable value for <code>$1</code>: <code>$2</code>"
+	"rawcss-application-list-validation-invalid-coating": "Invalid {{ns:RawCSS}} or {{ns:Template}} coating [[:$1|$2]]",
+	"rawcss-application-list-validation-invalid-coating-namespace": "Invalid {{ns:RawCSS}} or {{ns:Template}} coating [[:$1|$2]] (incorrect namespace)",
+	"rawcss-application-list-validation-invalid-coating-content-model": "Invalid {{ns:RawCSS}} or {{ns:Template}} coating [[:$1|$2]] (incorrect content model)",
+	"rawcss-application-list-validation-invalid-variables": "Invalid variable names or values for <code>$1</code>"
 }

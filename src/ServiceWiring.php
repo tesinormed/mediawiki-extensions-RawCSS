@@ -1,6 +1,6 @@
 <?php
 
-use MediaWiki\Extension\RawCSS\ApplicationRepository;
+use MediaWiki\Extension\RawCSS\Application\ApplicationRepository;
 use MediaWiki\MediaWikiServices;
 
 return [

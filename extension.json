@@ -1,6 +1,6 @@
 {
 	"name": "RawCSS",
-	"version": "0.5.4",
+	"version": "0.6.0",
 	"author": [
 		"tesinormed"
 	],
@@ -33,7 +33,7 @@
 			"id": 6200,
 			"constant": "NS_RAWCSS",
 			"name": "RawCSS",
-			"defaultcontentmodel": "css",
+			"defaultcontentmodel": "less",
 			"protection": "editrawcss"
 		},
 		{
@@ -44,31 +44,28 @@
 		}
 	],
 	"ContentHandlers": {
-		"rawcss-application-list": "MediaWiki\\Extension\\RawCSS\\ApplicationListContentHandler"
+		"rawcss-application-list": "MediaWiki\\Extension\\RawCSS\\Application\\ApplicationListContentHandler",
+		"less": "MediaWiki\\Extension\\RawCSS\\Less\\LessContentHandler"
 	},
 	"HookHandlers": {
 		"main": {
-			"class": "MediaWiki\\Extension\\RawCSS\\Hooks",
+			"class": "MediaWiki\\Extension\\RawCSS\\Hook\\MainHooks",
 			"services": [
 				"ConfigFactory",
 				"RevisionLookup",
 				"ConnectionProvider",
 				"MainWANObjectCache"
 			]
-		},
-		"codeeditor": {
-			"class": "MediaWiki\\Extension\\RawCSS\\CodeEditorHooks"
 		}
 	},
 	"Hooks": {
 		"ContentHandlerDefaultModelFor": "main",
-		"CodeEditorGetPageLanguage": "codeeditor",
 		"ResourceLoaderRegisterModules": "main",
 		"BeforePageDisplay": "main",
 		"PageSaveComplete": "main",
 		"PageDeleteComplete": "main"
 	},
-	"callback": "MediaWiki\\Extension\\RawCSS\\Hooks::onRegistration",
+	"callback": "MediaWiki\\Extension\\RawCSS\\Hook\\MainHooks::onRegistration",
 	"ServiceWiringFiles": [
 		"src/ServiceWiring.php"
 	],

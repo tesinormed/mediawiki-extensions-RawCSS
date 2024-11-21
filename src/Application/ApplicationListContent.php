@@ -1,13 +1,21 @@
 <?php
 
-namespace MediaWiki\Extension\RawCSS;
+namespace MediaWiki\Extension\RawCSS\Application;
 
+use Exception;
 use JsonContent;
+use Less_Parser;
 use MediaWiki\Title\Title;
 use StatusValue;
 use stdClass;
 
+/**
+ * A {@link \Content} for the RawCSS application list page
+ */
 class ApplicationListContent extends JsonContent {
+	/**
+	 * @var int The application list schema version (used for the caching in {@link ApplicationRepository})
+	 */
 	public const SCHEMA_VERSION = 0;
 
 	public function __construct( string $text, string $modelId = CONTENT_MODEL_RAWCSS_APPLICATION_LIST ) {
@@ -82,22 +90,28 @@ class ApplicationListContent extends JsonContent {
 			// iterate through each coating
 			$coatings = [];
 			foreach ( $specification['coatings'] as $coating ) {
-				// make sure the coating exists, isn't external, is in either the RawCSS or Template namespace, and has the correct content model
 				$coatingTitle = Title::newFromText( $coating, defaultNamespace: NS_RAWCSS );
-				if ( !$coatingTitle || !$coatingTitle->exists()
-					|| $coatingTitle->isExternal()
-					|| (
-						$coatingTitle->getNamespace() != NS_RAWCSS
-						&& $coatingTitle->getNamespace() != NS_TEMPLATE
-					)
-					|| $coatingTitle->getContentModel() != CONTENT_MODEL_CSS
-				) {
+				// make sure the coating exists and isn't outside of this wiki
+				if ( !$coatingTitle || !$coatingTitle->exists() || $coatingTitle->isExternal() ) {
 					return StatusValue::newFatal( 'rawcss-application-list-validation-invalid-coating',
 						$coatingTitle->getPrefixedText(), wfEscapeWikiText( $coatingTitle->getPrefixedText() )
 					);
 				}
+				// make sure the coating is in the RawCSS or Template namespace
+				if ( $coatingTitle->getNamespace() != NS_RAWCSS
+					&& $coatingTitle->getNamespace() != NS_TEMPLATE ) {
+					return StatusValue::newFatal( 'rawcss-application-list-validation-invalid-namespace',
+						$coatingTitle->getPrefixedText(), wfEscapeWikiText( $coatingTitle->getPrefixedText() )
+					);
+				}
+				// make sure the coating is Less or CSS
+				if ( $coatingTitle->getContentModel() != CONTENT_MODEL_LESS
+					&& $coatingTitle->getContentModel() != CONTENT_MODEL_CSS ) {
+					return StatusValue::newFatal( 'rawcss-application-list-validation-invalid-content-model',
+						$coatingTitle->getPrefixedText(), wfEscapeWikiText( $coatingTitle->getPrefixedText() )
+					);
+				}
 
-				// add the coating
 				$coatings[] = $coatingTitle->getArticleID();
 			}
 
@@ -113,41 +127,18 @@ class ApplicationListContent extends JsonContent {
 
 				// iterate through the variable property
 				foreach ( get_object_vars( $specification['variables'] ) as $name => $value ) {
-					// make sure the variable name is valid for CSS
-					if ( !preg_match( '/^[a-z-0-9,\s]+$/m', $name ) ) {
-						return StatusValue::newFatal( 'rawcss-application-list-validation-invalid-variable-name',
-							'.' . $base, $name
-						);
-					}
-					// make sure the variable name doesn't start with --
-					if ( str_starts_with( $name, '--' ) ) {
-						return StatusValue::newFatal( 'rawcss-application-list-validation-invalid-variable-name',
-							'.' . $base, $name
-						);
-					}
-
-					// make sure the variable value doesn't contain ;
-					if ( str_contains( $value, ';' ) ) {
-						return StatusValue::newFatal( 'rawcss-application-list-validation-invalid-variable-value',
-							'.' . $base, $value
-						);
-					}
-					// make sure the variable value doesn't contain */
-					if ( str_contains( $value, '*/' ) ) {
-						return StatusValue::newFatal( 'rawcss-application-list-validation-invalid-variable-value',
-							'.' . $base, $value
-						);
-					}
-					// make sure the variable value doesn't contain /*
-					if ( str_contains( $value, '/*' ) ) {
-						return StatusValue::newFatal( 'rawcss-application-list-validation-invalid-variable-value',
-							'.' . $base, $value
-						);
-					}
-
 					// add the variable
 					$variables[$name] = $value;
 				}
+			}
+			try {
+				$lessParser = new Less_Parser();
+				$lessParser->ModifyVars( $variables );
+				$lessCss = $lessParser->getCss();
+			} catch ( Exception ) {
+				return StatusValue::newFatal( 'rawcss-application-list-validation-invalid-variables',
+					'.' . $base
+				);
 			}
 
 			$preloadDirectives = [];

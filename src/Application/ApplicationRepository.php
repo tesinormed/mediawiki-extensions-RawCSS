@@ -1,6 +1,6 @@
 <?php
 
-namespace MediaWiki\Extension\RawCSS;
+namespace MediaWiki\Extension\RawCSS\Application;
 
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\SlotRecord;
@@ -9,7 +9,13 @@ use WANObjectCache;
 use Wikimedia\Rdbms\Database;
 use Wikimedia\Rdbms\IConnectionProvider;
 
+/**
+ * The repository to find and store RawCSS applications
+ */
 class ApplicationRepository {
+	/**
+	 * @var string The RawCSS application list page to search for applications in
+	 */
 	public const LIST_PAGE_TITLE = 'RawCSS-applications.json';
 
 	private RevisionLookup $revisionLookup;
@@ -35,10 +41,10 @@ class ApplicationRepository {
 	}
 
 	public function getApplicationById( int $id ): ?array {
+		// search for the correct application by checking the key with the given ID
 		$filteredApplications = array_filter( $this->getApplications(),
-			static fn ( $applicationId ) => $applicationId == $id,
-			ARRAY_FILTER_USE_KEY
-		);
+			static fn ( $applicationId ) => $applicationId == $id, ARRAY_FILTER_USE_KEY );
+
 		if ( !empty( $filteredApplications ) ) {
 			return $filteredApplications[$id];
 		} else {
@@ -69,7 +75,7 @@ class ApplicationRepository {
 					} else {
 						$parsedContent = $content->parse();
 						// make sure the list page can be parsed
-						if ( !$content->parse()->isGood() ) {
+						if ( !$parsedContent->isGood() ) {
 							return [];
 						} else {
 							return $parsedContent->getValue();
@@ -90,6 +96,7 @@ class ApplicationRepository {
 	}
 
 	public function onPageUpdate( Title $title ): void {
+		// purge the cache when the MediaWiki:RawCSS-applications.json page is changed
 		if ( $title->getNamespace() == NS_MEDIAWIKI && $title->getText() == self::LIST_PAGE_TITLE ) {
 			$this->purgeCache();
 		}
