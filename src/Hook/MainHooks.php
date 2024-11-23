@@ -31,8 +31,8 @@ use WikiPage;
 /** @noinspection PhpUnused */
 
 class MainHooks implements
-	ContentHandlerDefaultModelForHook,
 	ResourceLoaderRegisterModulesHook,
+	ContentHandlerDefaultModelForHook,
 	BeforePageDisplayHook,
 	PageSaveCompleteHook,
 	PageDeleteCompleteHook
@@ -69,6 +69,23 @@ class MainHooks implements
 	}
 
 	/**
+	 * Registers the different RawCSS applications as ResourceLoader modules
+	 * @param ResourceLoader $rl
+	 * @return void
+	 */
+	public function onResourceLoaderRegisterModules( ResourceLoader $rl ): void {
+		// for each application
+		foreach ( $this->applicationRepository->getApplicationIds() as $id ) {
+			// register it with ResourceLoader
+			$rl->register( "ext.rawcss.$id", [
+				'class' => ApplicationResourceLoaderModule::class,
+				'applicationId' => $id,
+				'applicationRepository' => $this->applicationRepository,
+			] );
+		}
+	}
+
+	/**
 	 * @param Title $title
 	 * @param string &$model
 	 * @return bool
@@ -80,43 +97,22 @@ class MainHooks implements
 			return false;
 		}
 
-		if ( $title->getNamespace() == NS_RAWCSS ) {
-			// RawCSS:*.less
-			if ( str_ends_with( $title->getText(), '.less' ) ) {
-				$model = CONTENT_MODEL_LESS;
-				return false;
-			}
-			// RawCSS:*.css
-			if ( str_ends_with( $title->getText(), '.css' ) ) {
-				$model = CONTENT_MODEL_CSS;
-				return false;
-			}
+		// RawCSS:*.css
+		if ( $title->getNamespace() == NS_RAWCSS && str_ends_with( $title->getText(), '.css' ) ) {
+			$model = CONTENT_MODEL_CSS;
+			return false;
 		}
 
-		if ( $title->getNamespace() == NS_TEMPLATE ) {
+		// if setting the default content model is enabled
+		if ( $this->extensionConfig->get( 'RawCSSSetCSSContentModel' ) ) {
 			// Template:*.css
-			if ( $this->extensionConfig->get( 'RawCSSSetCSSContentModel' )
-				&& str_ends_with( $title->getText(), '.css' ) ) {
+			if ( $title->getNamespace() == NS_TEMPLATE && str_ends_with( $title->getText(), '.css' ) ) {
 				$model = CONTENT_MODEL_CSS;
 				return false;
 			}
 		}
 
 		return true;
-	}
-
-	/**
-	 * Registers the different RawCSS applications as ResourceLoader modules
-	 * @param ResourceLoader $rl
-	 * @return void
-	 */
-	public function onResourceLoaderRegisterModules( ResourceLoader $rl ): void {
-		foreach ( $this->applicationRepository->getApplicationIds() as $id ) {
-			$rl->register( 'ext.rawcss.' . $id, [
-				'class' => ApplicationResourceLoaderModule::class,
-				'id' => $id,
-			] );
-		}
 	}
 
 	/**

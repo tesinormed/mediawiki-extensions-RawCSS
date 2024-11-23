@@ -31,15 +31,17 @@ class ApplicationListContentHandler extends JsonContentHandler {
 		$status = parent::validateSave( $content, $validationParams );
 		if ( !$status->isOK() ) {
 			return $status;
+		}
+
+		// validate JSON according to the application list JSON schema
+		/** @var ApplicationListContent $content */
+		$parsedContent = $content->parse();
+		if ( !$parsedContent->isGood() ) {
+			// mark it as fatal
+			$parsedContent->setOK( false );
+			return $parsedContent;
 		} else {
-			// validate JSON according to the application list JSON schema
-			/** @var ApplicationListContent $content */
-			$parsedContent = $content->parse();
-			if ( !$parsedContent->isOK() ) {
-				return $parsedContent;
-			} else {
-				return StatusValue::newGood();
-			}
+			return StatusValue::newGood();
 		}
 	}
 }

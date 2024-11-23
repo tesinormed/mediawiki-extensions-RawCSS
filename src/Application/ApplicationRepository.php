@@ -61,26 +61,25 @@ class ApplicationRepository {
 
 				$revisionRecord = $this->revisionLookup
 					->getRevisionByTitle( Title::makeTitle( NS_MEDIAWIKI, self::LIST_PAGE_TITLE ) );
-
 				// make sure the list page is readable
 				if ( !$revisionRecord
 					|| !$revisionRecord->getContent( SlotRecord::MAIN )
 					|| $revisionRecord->getContent( SlotRecord::MAIN )->isEmpty() ) {
 					return [];
+				}
+
+				$content = $revisionRecord->getContent( SlotRecord::MAIN );
+				// make sure the list page has the correct content model
+				if ( !( $content instanceof ApplicationListContent ) ) {
+					return [];
+				}
+
+				$parsedContent = $content->parse();
+				// make sure the list page can be parsed
+				if ( !$parsedContent->isOK() ) {
+					return [];
 				} else {
-					$content = $revisionRecord->getContent( SlotRecord::MAIN );
-					// make sure the list page has the correct content model
-					if ( !( $content instanceof ApplicationListContent ) ) {
-						return [];
-					} else {
-						$parsedContent = $content->parse();
-						// make sure the list page can be parsed
-						if ( !$parsedContent->isGood() ) {
-							return [];
-						} else {
-							return $parsedContent->getValue();
-						}
-					}
+					return $parsedContent->getValue();
 				}
 			},
 			[

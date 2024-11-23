@@ -2,16 +2,8 @@
 
 namespace MediaWiki\Extension\RawCSS\Application;
 
-use CssContent;
-use Exception;
-use Less_Parser;
-use MediaWiki\Extension\RawCSS\Less\LessContent;
-use MediaWiki\MediaWikiServices;
 use MediaWiki\ResourceLoader\Context;
 use MediaWiki\ResourceLoader\Module;
-use MediaWiki\Revision\RevisionLookup;
-use MediaWiki\Revision\SlotRecord;
-use MediaWiki\Title\Title;
 
 /**
  * A {@link ResourceLoader} {@link Module} for a RawCSS application
@@ -19,12 +11,10 @@ use MediaWiki\Title\Title;
 class ApplicationResourceLoaderModule extends Module {
 	private int $applicationId;
 	private ApplicationRepository $applicationRepository;
-	private RevisionLookup $revisionLookup;
 
 	public function __construct( array $options ) {
-		$this->applicationId = $options['id'];
-		$this->applicationRepository = MediaWikiServices::getInstance()->getService( 'RawCSS.ApplicationRepository' );
-		$this->revisionLookup = MediaWikiServices::getInstance()->getRevisionLookup();
+		$this->applicationId = $options['applicationId'];
+		$this->applicationRepository = $options['applicationRepository'];
 	}
 
 	public function getApplication(): array {
@@ -32,42 +22,7 @@ class ApplicationResourceLoaderModule extends Module {
 	}
 
 	public function getStyles( Context $context ): array {
-		$styles = [];
-
-		// create the Less parser
-		$lessParser = new Less_Parser( [ 'compress' => true, 'relativeUrls' => false ] );
-		// add the application variables
-		$lessParser->ModifyVars( $this->getApplication()['variables'] );
-
-		// to use later for conditional addition of the compiled Less
-		$lessCoatingCount = 0;
-		foreach ( $this->getApplication()['coatings'] as $coatingArticleId ) {
-			$coatingTitle = Title::newFromID( $coatingArticleId );
-			$coatingContent = $this->revisionLookup->getRevisionByTitle( $coatingTitle )
-				->getContent( SlotRecord::MAIN );
-
-			if ( $coatingContent instanceof LessContent ) {
-				try {
-					$lessParser->parse( $coatingContent->getText() );
-				} catch ( Exception ) {
-					wfLogWarning( "RawCSS application resource module (application ID $this->applicationId) has an invalid coating; article ID $coatingArticleId" );
-				}
-				$lessCoatingCount++;
-			} elseif ( $coatingContent instanceof CssContent ) {
-				// add the raw CSS
-				$styles['all'][] = $coatingContent->getText();
-			}
-		}
-		if ( $lessCoatingCount > 0 ) {
-			try {
-				// add the compiled Less
-				$styles['all'][] = $lessParser->getCss();
-			} catch ( Exception ) {
-				wfLogWarning( "RawCSS application resource module (application ID $this->applicationId) failed Less CSS compilation" );
-			}
-		}
-
-		return $styles;
+		return [ 'all' => $this->getApplication()['styles'] ];
 	}
 
 	public function getType(): string {

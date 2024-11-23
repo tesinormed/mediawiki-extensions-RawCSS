@@ -26,8 +26,7 @@ A MediaWiki extension which allows for the transclusion of raw CSS from the RawC
 
 ### Conflict with [TemplateStyles](https://www.mediawiki.org/wiki/Extension:TemplateStyles)
 
-If `$wgRawCSSSetCSSContentModel` is set to `true` (by default),
-you must disable `$wgTemplateStylesNamespaces[NS_TEMPLATE]` by setting it to `false` in [`LocalSettings.php`](https://www.mediawiki.org/wiki/Manual:LocalSettings.php).
+If `$wgRawCSSSetCSSContentModel` is set to `true` (by default), you must disable `$wgTemplateStylesNamespaces[NS_TEMPLATE]` by setting it to `false` in [`LocalSettings.php`](https://www.mediawiki.org/wiki/Manual:LocalSettings.php).
 
 ## User guide
 
@@ -57,16 +56,17 @@ Create a page called `MediaWiki:RawCSS-applications.json` with a general format 
 The general format of `MediaWiki:RawCSS-applications.json` is:
 
 - The top-level JSON data type must be an object (the file must start with `{` and end with `}`)
-- Each top-level property must be the name of a template (with or without the `Template:` prefix)
-- The `coatings` property must be a list of coating pages (either in the `RawCSS` or `Template` namespaces, with the content model set to `css`)
+- Each top-level property must be the name of a template (without the `Template:` prefix)
+- The `coatings` property must be a list of coating pages (either in the RawCSS (`less` or `css` content model) or Template (`css` content model only) namespace)
 - The `variables` property must be an object of CSS variables to set (don't prepend the name with `--`)
 - The `preload` property must be a list of objects which must have the `href` and `as` properties set
 	- `href` must be a valid URL
+	- See the [documentation on `rel=preload`](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/rel/preload)
 
 ### Styling a template
 
 1. Create a template with any content; it doesn't matter.
-2. Create a page, either in the RawCSS ([Less](https://lesscss.org/) or CSS allowed) or Template (CSS only) namespaces.
+2. Create a page, either in the RawCSS ([Less](https://lesscss.org/) or CSS) or Template (CSS only) namespaces.
 3. Create or edit the `MediaWiki:RawCSS-applications.json` with something like [the above snippet](#user-guide) (if your template is `Template:Apple` and your coating is `RawCSS:Apple styling`)
 
 ### Additional notes
