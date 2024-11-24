@@ -52,6 +52,14 @@ class ApplicationRepository {
 		}
 	}
 
+	public function isCoatingUsed( int $id ): bool {
+		// search for applications with a coating matching the given ID
+		$filteredApplications = array_filter( $this->getApplications(),
+			static fn ( $application ) => in_array( $id, $application['coatings'] ) );
+
+		return !empty( $filteredApplications );
+	}
+
 	public function getApplications(): array {
 		return $this->wanCache->getWithSetCallback(
 			$this->getCacheKey(),
@@ -97,6 +105,10 @@ class ApplicationRepository {
 	public function onPageUpdate( Title $title ): void {
 		// purge the cache when the MediaWiki:RawCSS-applications.json page is changed
 		if ( $title->getNamespace() == NS_MEDIAWIKI && $title->getText() == self::LIST_PAGE_TITLE ) {
+			$this->purgeCache();
+		}
+		// purge the cache if this is an in-use coating
+		if ( $this->isCoatingUsed( $title->getArticleID() ) ) {
 			$this->purgeCache();
 		}
 	}
