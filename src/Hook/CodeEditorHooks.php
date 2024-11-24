@@ -11,5 +11,8 @@ class CodeEditorHooks implements CodeEditorGetPageLanguageHook {
 		if ( $model === CONTENT_MODEL_RAWCSS_APPLICATION_LIST ) {
 			$lang = 'json';
 		}
+		if ( $model === CONTENT_MODEL_LESS ) {
+			$lang = 'less';
+		}
 	}
 }

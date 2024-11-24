@@ -159,8 +159,8 @@ class ApplicationListContent extends JsonContent {
 			$coatingContent = $coatingRevisionRecord->getContent( SlotRecord::MAIN );
 			if ( $coatingContent instanceof LessContent ) {
 				try {
-					$lessParser->ModifyVars( $variables );
 					$lessParser->parse( $coatingContent->getText() );
+					$lessParser->ModifyVars( $variables );
 					$styleSheets[] = $lessParser->getCss();
 					$lessParser->Reset();
 					$coatingArticleIDs[] = $coatingTitle->getArticleID();
