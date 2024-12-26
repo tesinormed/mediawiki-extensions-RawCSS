@@ -4,12 +4,12 @@
 			"tesinormed"
 		]
 	},
-	"rawcss-desc": "Allows for the transclusion of raw CSS from the {{ns:RawCSS}} or {{ns:Template}} namespace into pages",
-	"action-editrawcss": "create and edit raw CSS",
+	"rawcss-desc": "Allows for the transclusion of Less and CSS into pages",
+	"action-editrawcss": "create and edit raw CSS in the <code>{{ns:RawCSS}}</code> namespace",
 	"right-editrawcss": "Create and edit raw CSS in the <code>{{ns:RawCSS}}</code> namespace",
-	"rawcss-application-list-validation-invalid-data-type": "Invalid data type for <code>$1</code> (expected $2)",
-	"rawcss-application-list-validation-missing-data": "Missing data at <code>$1</code>",
-	"rawcss-application-list-validation-invalid-base": "Invalid base [[:$1|$2]]",
-	"rawcss-application-list-validation-invalid-coating": "Invalid coating [[:$1|$2]]",
-	"rawcss-application-list-validation-invalid-variables": "Invalid variable names or values for <code>$1</code>"
+	"content-model-less": "Less",
+	"rawcss-tag-missing-ref": "RawCSS: <code>ref</code> attribute is missing",
+	"rawcss-tag-invalid-ref": "RawCSS: <code>ref</code> attribute is invalid (ref does not exist in [[{{ns:MediaWiki}}:RawCSS-applications]])",
+	"rawcss-page-error-category": "Pages with RawCSS errors",
+	"rawcss-page-error-category-desc": "Pages which contain invalid RawCSS parser tags"
 }

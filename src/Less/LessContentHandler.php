@@ -6,7 +6,7 @@ use CodeContentHandler;
 use MediaWiki\Title\Title;
 
 /**
- * A {@link \ContentHandler} for <a href="https://lesscss.org/">Less</a>
+ * Content handler for Less
  */
 /** @noinspection PhpUnused */
 class LessContentHandler extends CodeContentHandler {

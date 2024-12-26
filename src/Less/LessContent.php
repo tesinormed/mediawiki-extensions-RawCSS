@@ -5,7 +5,7 @@ namespace MediaWiki\Extension\RawCSS\Less;
 use TextContent;
 
 /**
- * A {@link \Content} for <a href="https://lesscss.org/">Less</a>
+ * Content object implementation for representing Less
  */
 class LessContent extends TextContent {
 	public function __construct( string $text, string $modelId = CONTENT_MODEL_LESS ) {

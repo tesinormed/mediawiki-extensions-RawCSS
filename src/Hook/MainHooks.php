@@ -2,15 +2,14 @@
 
 namespace MediaWiki\Extension\RawCSS\Hook;
 
-use ExtensionRegistry;
 use ManualLogEntry;
-use MediaWiki\Config\Config;
-use MediaWiki\Config\ConfigFactory;
 use MediaWiki\Extension\RawCSS\Application\ApplicationRepository;
 use MediaWiki\Extension\RawCSS\Application\ApplicationResourceLoaderModule;
+use MediaWiki\Extension\RawCSS\Parser\RawCssParserTag;
+use MediaWiki\Hook\ParserFirstCallInitHook;
 use MediaWiki\Output\Hook\BeforePageDisplayHook;
-use MediaWiki\Output\OutputPage;
 use MediaWiki\Page\Hook\PageDeleteCompleteHook;
+use MediaWiki\Page\PageStore;
 use MediaWiki\Page\ProperPageIdentity;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\ResourceLoader\Hook\ResourceLoaderRegisterModulesHook;
@@ -18,61 +17,59 @@ use MediaWiki\ResourceLoader\ResourceLoader;
 use MediaWiki\Revision\Hook\ContentHandlerDefaultModelForHook;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
-use MediaWiki\Storage\EditResult;
 use MediaWiki\Storage\Hook\PageSaveCompleteHook;
-use MediaWiki\Title\Title;
-use MediaWiki\User\UserIdentity;
-use RuntimeException;
-use Skin;
 use WANObjectCache;
 use Wikimedia\Rdbms\IConnectionProvider;
-use WikiPage;
 
 /** @noinspection PhpUnused */
 
 class MainHooks implements
-	ResourceLoaderRegisterModulesHook,
+	ParserFirstCallInitHook,
 	ContentHandlerDefaultModelForHook,
+	ResourceLoaderRegisterModulesHook,
 	BeforePageDisplayHook,
 	PageSaveCompleteHook,
 	PageDeleteCompleteHook
 {
-	private Config $extensionConfig;
 	private ApplicationRepository $applicationRepository;
 
 	public function __construct(
-		ConfigFactory $configFactory,
+		PageStore $pageStore,
 		RevisionLookup $revisionLookup,
-		IConnectionProvider $databaseProvider,
+		IConnectionProvider $dbProvider,
 		WANObjectCache $wanCache
 	) {
-		$this->extensionConfig = $configFactory->makeConfig( 'rawcss' );
-		$this->applicationRepository = new ApplicationRepository( $revisionLookup, $databaseProvider, $wanCache );
+		$this->applicationRepository = new ApplicationRepository(
+			$pageStore,
+			$revisionLookup,
+			$dbProvider,
+			$wanCache
+		);
 	}
 
 	/** @noinspection PhpUnused */
 	public static function onRegistration(): void {
 		// define the content model constants
-		define( 'CONTENT_MODEL_RAWCSS_APPLICATION_LIST', 'rawcss-application-list' );
 		define( 'CONTENT_MODEL_LESS', 'less' );
-
-		// check for incompatibility with TemplateStyles
-		if ( ExtensionRegistry::getInstance()->isLoaded( 'TemplateStyles' ) ) {
-			global $wgRawCSSSetCSSContentModel;
-			global $wgTemplateStylesNamespaces;
-			if ( $wgRawCSSSetCSSContentModel && $wgTemplateStylesNamespaces[NS_TEMPLATE] ) {
-				throw new RuntimeException(
-					'$wgRawCSSSetCSSContentModel requires $wgTemplateStylesNamespaces[NS_TEMPLATE] to be false'
-				);
-			}
-		}
 	}
 
-	/**
-	 * Registers the different RawCSS applications as ResourceLoader modules
-	 * @param ResourceLoader $rl
-	 * @return void
-	 */
+	/** @inheritDoc */
+	public function onParserFirstCallInit( $parser ): void {
+		$parser->setHook( 'rawcss', [ RawCssParserTag::class, 'onParserHook' ] );
+	}
+
+	/** @inheritDoc */
+	public function onContentHandlerDefaultModelFor( $title, &$model ): bool {
+		// RawCSS:*.css
+		if ( $title->getNamespace() == NS_RAWCSS && str_ends_with( $title->getText(), '.css' ) ) {
+			$model = CONTENT_MODEL_CSS;
+			return false;
+		}
+
+		return true;
+	}
+
+	/** @inheritDoc */
 	public function onResourceLoaderRegisterModules( ResourceLoader $rl ): void {
 		// for each application
 		foreach ( $this->applicationRepository->getApplicationIds() as $id ) {
@@ -80,110 +77,44 @@ class MainHooks implements
 			$rl->register( "ext.rawcss.$id", [
 				'class' => ApplicationResourceLoaderModule::class,
 				'applicationId' => $id,
-				'applicationRepository' => $this->applicationRepository,
 			] );
 		}
 	}
 
-	/**
-	 * @param Title $title
-	 * @param string &$model
-	 * @return bool
-	 */
-	public function onContentHandlerDefaultModelFor( $title, &$model ): bool {
-		// MediaWiki:RawCSS-applications.json
-		if ( $title->getNamespace() == NS_MEDIAWIKI && $title->getText() == ApplicationRepository::LIST_PAGE_TITLE ) {
-			$model = CONTENT_MODEL_RAWCSS_APPLICATION_LIST;
-			return false;
-		}
-
-		// RawCSS:*.css
-		if ( $title->getNamespace() == NS_RAWCSS && str_ends_with( $title->getText(), '.css' ) ) {
-			$model = CONTENT_MODEL_CSS;
-			return false;
-		}
-
-		// if setting the default content model is enabled
-		if ( $this->extensionConfig->get( 'RawCSSSetCSSContentModel' ) ) {
-			// Template:*.css
-			if ( $title->getNamespace() == NS_TEMPLATE && str_ends_with( $title->getText(), '.css' ) ) {
-				$model = CONTENT_MODEL_CSS;
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	/**
-	 * Adds the requested coatings and preload directives to a page
-	 * @param OutputPage $out
-	 * @param Skin $skin
-	 * @return void
-	 */
+	/** @inheritDoc */
 	public function onBeforePageDisplay( $out, $skin ): void {
-		// ResourceLoader modules to load
-		$moduleNames = [];
+		// get all the RawCSS module styles applied to this page
+		$rawCssModuleStyles = array_filter(
+			$out->getModuleStyles(),
+			static fn ( $moduleStyle ) => str_starts_with( $moduleStyle, 'ext.rawcss.' )
+		);
 
-		// if there's any templates on this page
-		if ( array_key_exists( NS_TEMPLATE, $out->getTemplateIds() ) ) {
-			// go through each template
-			foreach ( $out->getTemplateIds()[NS_TEMPLATE] as $dbKey => $revisionId ) {
-				$title = Title::makeTitle( NS_TEMPLATE, $dbKey );
-
-				// and see if there's an application under that ID
-				if ( $this->applicationRepository->getApplicationById( $title->getArticleID() ) ) {
-					// add the application ResourceLoader module
-					$moduleNames[] = 'ext.rawcss.' . $title->getArticleID();
-				}
+		// if there's no RawCSS module styles on this page
+		if ( $rawCssModuleStyles == [] ) {
+			$wildcardApplication = $this->applicationRepository->getApplicationById( '*' );
+			// if there's a wildcard application
+			if ( $wildcardApplication !== null ) {
+				$out->addModuleStyles( [ 'ext.rawcss.*' ] );
 			}
 		}
 
-		// if this page is a template
-		if ( $out->getTitle()->getNamespace() == NS_TEMPLATE ) {
-			// if there's an application under that ID
-			if ( $this->applicationRepository->getApplicationById( $out->getTitle()->getArticleID() ) ) {
-				// add the application ResourceLoader module
-				$moduleNames[] = 'ext.rawcss.' . $out->getTitle()->getArticleID();
-			}
-		}
+		// for each of the RawCSS module styles
+		foreach ( $rawCssModuleStyles as $rawCssModuleStyle ) {
+			$application = $this->applicationRepository->getApplicationById(
+				preg_replace( '/^ext\.rawcss\./', '', $rawCssModuleStyle )
+			);
 
-		// if there were no matches and there's a catchall application
-		if ( empty( $moduleNames ) && $this->applicationRepository->getApplicationById( 0 ) !== null ) {
-			// add the application ResourceLoader module
-			$moduleNames[] = 'ext.rawcss.0';
-		}
-
-		// add the ResourceLoader modules
-		$out->addModuleStyles( $moduleNames );
-
-		// for each module
-		foreach ( $moduleNames as $moduleName ) {
-			/** @var ApplicationResourceLoaderModule $module */
-			$module = $out->getResourceLoader()->getModule( $moduleName );
-
-			// if there's any preload directives
-			foreach ( $module->getApplication()['preload'] as $href => $preloadDirective ) {
-				// add them as <link rel="preload"> tags
+			foreach ( $application['preload'] as $preload ) {
+				// add the preload directives
 				$out->addLink( [
 					'rel' => 'preload',
-					'href' => $href,
-					...$preloadDirective
+					...$preload,
 				] );
 			}
 		}
 	}
 
-	/**
-	 * Runs the application repository page update hook
-	 * @param WikiPage $wikiPage
-	 * @param UserIdentity $user
-	 * @param string $summary
-	 * @param int $flags
-	 * @param RevisionRecord $revisionRecord
-	 * @param EditResult $editResult
-	 * @return void
-	 */
+	/** @inheritDoc */
 	public function onPageSaveComplete(
 		$wikiPage,
 		$user,
@@ -192,20 +123,10 @@ class MainHooks implements
 		$revisionRecord,
 		$editResult
 	): void {
-		$this->applicationRepository->onPageUpdate( $wikiPage->getTitle() );
+		$this->applicationRepository->onPageUpdate( $wikiPage );
 	}
 
-	/**
-	 * Runs the application repository page update hook
-	 * @param ProperPageIdentity $page
-	 * @param Authority $deleter
-	 * @param string $reason
-	 * @param int $pageID
-	 * @param RevisionRecord $deletedRev
-	 * @param ManualLogEntry $logEntry
-	 * @param int $archivedRevisionCount
-	 * @return void
-	 */
+	/** @inheritDoc */
 	public function onPageDeleteComplete(
 		ProperPageIdentity $page,
 		Authority $deleter,
@@ -215,6 +136,6 @@ class MainHooks implements
 		ManualLogEntry $logEntry,
 		int $archivedRevisionCount
 	): void {
-		$this->applicationRepository->onPageUpdate( Title::newFromPageIdentity( $page ) );
+		$this->applicationRepository->onPageUpdate( $page );
 	}
 }

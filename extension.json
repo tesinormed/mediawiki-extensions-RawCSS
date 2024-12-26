@@ -1,6 +1,6 @@
 {
 	"name": "RawCSS",
-	"version": "0.8.1",
+	"version": "0.9.0",
 	"author": [
 		"tesinormed"
 	],
@@ -21,8 +21,8 @@
 		"MediaWiki\\Extension\\RawCSS\\": "src/"
 	},
 	"config": {
-		"RawCSSSetCSSContentModel": {
-			"value": true
+		"RawCSSAllowedSkins": {
+			"value": null
 		}
 	},
 	"ConfigRegistry": {
@@ -34,7 +34,8 @@
 			"constant": "NS_RAWCSS",
 			"name": "RawCSS",
 			"defaultcontentmodel": "less",
-			"protection": "editrawcss"
+			"protection": "editrawcss",
+			"subpages": true
 		},
 		{
 			"id": 6201,
@@ -44,14 +45,13 @@
 		}
 	],
 	"ContentHandlers": {
-		"rawcss-application-list": "MediaWiki\\Extension\\RawCSS\\Application\\ApplicationListContentHandler",
 		"less": "MediaWiki\\Extension\\RawCSS\\Less\\LessContentHandler"
 	},
 	"HookHandlers": {
 		"main": {
 			"class": "MediaWiki\\Extension\\RawCSS\\Hook\\MainHooks",
 			"services": [
-				"ConfigFactory",
+				"PageStore",
 				"RevisionLookup",
 				"ConnectionProvider",
 				"MainWANObjectCache"
@@ -62,6 +62,7 @@
 		}
 	},
 	"Hooks": {
+		"ParserFirstCallInit": "main",
 		"ContentHandlerDefaultModelFor": "main",
 		"CodeEditorGetPageLanguage": "codeeditor",
 		"ResourceLoaderRegisterModules": "main",
@@ -84,11 +85,9 @@
 			"editrawcss": true
 		}
 	},
-	"GrantPermissions": {
-		"editsiteconfig": {
-			"editrawcss": true
-		}
-	},
+	"TrackingCategories": [
+		"rawcss-page-error-category"
+	],
 	"MessagesDirs": {
 		"RawCSS": [
 			"i18n"

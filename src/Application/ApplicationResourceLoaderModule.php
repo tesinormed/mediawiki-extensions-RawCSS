@@ -2,6 +2,10 @@
 
 namespace MediaWiki\Extension\RawCSS\Application;
 
+use Exception;
+use Less_Parser;
+use MediaWiki\Config\Config;
+use MediaWiki\MediaWikiServices;
 use MediaWiki\ResourceLoader\Context;
 use MediaWiki\ResourceLoader\Module;
 
@@ -9,12 +13,14 @@ use MediaWiki\ResourceLoader\Module;
  * A {@link ResourceLoader} {@link Module} for a RawCSS application
  */
 class ApplicationResourceLoaderModule extends Module {
-	private int $applicationId;
+	private string $applicationId;
 	private ApplicationRepository $applicationRepository;
+	private Config $extensionConfig;
 
 	public function __construct( array $options ) {
 		$this->applicationId = $options['applicationId'];
-		$this->applicationRepository = $options['applicationRepository'];
+		$this->applicationRepository = MediaWikiServices::getInstance()->getService( 'RawCSS.ApplicationRepository' );
+		$this->extensionConfig = MediaWikiServices::getInstance()->getConfigFactory()->makeConfig( 'rawcss' );
 	}
 
 	public function getApplication(): array {
@@ -22,7 +28,44 @@ class ApplicationResourceLoaderModule extends Module {
 	}
 
 	public function getStyles( Context $context ): array {
-		return [ 'all' => $this->getApplication()['styles'] ];
+		// if this skin isn't supported, don't output any styles
+		if ( !in_array( $context->getSkin(), $this->extensionConfig->get( 'RawCSSAllowedSkins' ) ) ) {
+			return [];
+		}
+
+		$styles = [];
+		$lessParser = new Less_Parser( [ 'compress' => true, 'relativeUrls' => false ] );
+
+		// for each style
+		foreach ( $this->getApplication()['styles'] as $stylePageTitle => $styleVariables ) {
+			// get the style page's content
+			$stylePageContent = $this->applicationRepository->getStylePageContent( $stylePageTitle );
+			// make sure it's valid
+			if ( $stylePageContent === null ) {
+				continue;
+			}
+
+			switch ( $stylePageContent->getModel() ) {
+				case CONTENT_MODEL_LESS:
+					// parse the Less
+					try {
+						$lessParser->ModifyVars( $styleVariables );
+						$lessParser->parse( $stylePageContent->getText() );
+						$styles[] = $lessParser->getCss();
+					} catch ( Exception ) {
+					}
+					break;
+				case CONTENT_MODEL_CSS:
+					// add it directly
+					$styles[] = $stylePageContent->getText();
+			}
+		}
+
+		return [ 'all' => $styles ];
+	}
+
+	public function getSkins(): ?array {
+		return $this->extensionConfig->get( 'RawCSSAllowedSkins' );
 	}
 
 	public function getType(): string {
@@ -39,12 +82,9 @@ class ApplicationResourceLoaderModule extends Module {
 
 	public function getDefinitionSummary( Context $context ): array {
 		$summary = parent::getDefinitionSummary( $context );
-		$summary[] = [
-			// use the application specification as determiners
-			'coatings' => $this->getApplication()['coatings'],
-			'variables' => $this->getApplication()['variables'],
-			'preload' => $this->getApplication()['preload'],
-		];
+		// use the application specification as determiners
+		$summary['styles'] = $this->getApplication()['styles'];
+		$summary['preload'] = $this->getApplication()['preload'];
 		return $summary;
 	}
 }
