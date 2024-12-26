@@ -49,8 +49,8 @@ class ApplicationResourceLoaderModule extends Module {
 				case CONTENT_MODEL_LESS:
 					// parse the Less
 					try {
-						$lessParser->ModifyVars( $styleVariables );
 						$lessParser->parse( $stylePageContent->getText() );
+						$lessParser->ModifyVars( $styleVariables );
 						$styles[] = $lessParser->getCss();
 					} catch ( Exception ) {
 					}
