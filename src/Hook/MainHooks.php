@@ -18,6 +18,7 @@ use MediaWiki\Revision\Hook\ContentHandlerDefaultModelForHook;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Storage\Hook\PageSaveCompleteHook;
+use RuntimeException;
 use WANObjectCache;
 use Wikimedia\Rdbms\IConnectionProvider;
 
@@ -51,6 +52,10 @@ class MainHooks implements
 	public static function onRegistration(): void {
 		// define the content model constants
 		define( 'CONTENT_MODEL_LESS', 'less' );
+
+		if ( !array_key_exists( 'wgRawCSSAllowedSkins', $GLOBALS ) ) {
+			throw new RuntimeException( '$wgRawCSSAllowedSkins must be set' );
+		}
 	}
 
 	/** @inheritDoc */
