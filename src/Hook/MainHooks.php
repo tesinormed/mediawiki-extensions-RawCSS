@@ -92,6 +92,7 @@ class MainHooks implements
 		$rawCssModuleStyles = array_filter(
 			$out->getModuleStyles(),
 			static fn ( $moduleStyle ) => str_starts_with( $moduleStyle, 'ext.rawcss.' )
+				&& !str_ends_with( $moduleStyle, '__ignore_for_wildcard' )
 		);
 
 		// if there's no RawCSS module styles on this page
