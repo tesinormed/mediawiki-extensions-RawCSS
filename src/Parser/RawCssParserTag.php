@@ -26,7 +26,7 @@ class RawCssParserTag {
 		}
 
 		if ( $applicationRepository->getApplicationById( $params['ref'] ) === null ) {
-			return self::formatError( $parser, 'rawcss-tag-invalid-ref' );
+			return self::formatError( $parser, 'rawcss-tag-invalid-ref', wfEscapeWikiText( $params['ref'] ) );
 		}
 
 		$parser->getOutput()->addModuleStyles( [ "ext.rawcss.{$params['ref']}" ] );
