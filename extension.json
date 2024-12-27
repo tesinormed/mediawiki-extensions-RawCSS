@@ -1,13 +1,13 @@
 {
 	"name": "RawCSS",
-	"version": "0.11.0",
+	"version": "0.11.1",
 	"author": [
 		"tesinormed"
 	],
 	"url": "https://www.mediawiki.org/wiki/Extension:RawCSS",
 	"descriptionmsg": "rawcss-desc",
 	"license-name": "CC0-1.0",
-	"type": "other",
+	"type": "parserhook",
 	"requires": {
 		"MediaWiki": ">= 1.42.0",
 		"platform": {
