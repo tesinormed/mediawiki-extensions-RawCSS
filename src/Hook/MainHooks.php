@@ -8,6 +8,7 @@ use MediaWiki\Extension\RawCSS\Application\ApplicationResourceLoaderModule;
 use MediaWiki\Extension\RawCSS\Parser\RawCssParserTag;
 use MediaWiki\Hook\ParserFirstCallInitHook;
 use MediaWiki\Output\Hook\BeforePageDisplayHook;
+use MediaWiki\Page\Hook\ArticlePurgeHook;
 use MediaWiki\Page\Hook\PageDeleteCompleteHook;
 use MediaWiki\Page\PageStore;
 use MediaWiki\Page\ProperPageIdentity;
@@ -30,7 +31,8 @@ class MainHooks implements
 	ResourceLoaderRegisterModulesHook,
 	BeforePageDisplayHook,
 	PageSaveCompleteHook,
-	PageDeleteCompleteHook
+	PageDeleteCompleteHook,
+	ArticlePurgeHook
 {
 	private ApplicationRepository $applicationRepository;
 
@@ -48,7 +50,10 @@ class MainHooks implements
 		);
 	}
 
-	/** @noinspection PhpUnused */
+	/**
+	 * @link https://www.mediawiki.org/wiki/Manual:Extension.json/Schema#callback
+	 * @noinspection PhpUnused
+	 */
 	public static function onRegistration(): void {
 		// define the content model constants
 		define( 'CONTENT_MODEL_LESS', 'less' );
@@ -58,12 +63,18 @@ class MainHooks implements
 		}
 	}
 
-	/** @inheritDoc */
+	/**
+	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/ParserFirstCallInit
+	 * @inheritDoc
+	 */
 	public function onParserFirstCallInit( $parser ): void {
 		$parser->setHook( 'rawcss', [ RawCssParserTag::class, 'onParserHook' ] );
 	}
 
-	/** @inheritDoc */
+	/**
+	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/ContentHandlerDefaultModelFor
+	 * @inheritDoc
+	 */
 	public function onContentHandlerDefaultModelFor( $title, &$model ): bool {
 		// RawCSS:*.css
 		if ( $title->getNamespace() == NS_RAWCSS && str_ends_with( $title->getText(), '.css' ) ) {
@@ -74,7 +85,10 @@ class MainHooks implements
 		return true;
 	}
 
-	/** @inheritDoc */
+	/**
+	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/ResourceLoaderRegisterModules
+	 * @inheritDoc
+	 */
 	public function onResourceLoaderRegisterModules( ResourceLoader $rl ): void {
 		// for each application
 		foreach ( $this->applicationRepository->getApplicationIds() as $id ) {
@@ -86,7 +100,10 @@ class MainHooks implements
 		}
 	}
 
-	/** @inheritDoc */
+	/**
+	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/BeforePageDisplay
+	 * @inheritDoc
+	 */
 	public function onBeforePageDisplay( $out, $skin ): void {
 		// get all the RawCSS module styles applied to this page
 		$rawCssModuleStyles = array_filter(
@@ -120,7 +137,10 @@ class MainHooks implements
 		}
 	}
 
-	/** @inheritDoc */
+	/**
+	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/PageSaveComplete
+	 * @inheritDoc
+	 */
 	public function onPageSaveComplete(
 		$wikiPage,
 		$user,
@@ -132,7 +152,10 @@ class MainHooks implements
 		$this->applicationRepository->onPageUpdate( $wikiPage );
 	}
 
-	/** @inheritDoc */
+	/**
+	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/PageDeleteComplete
+	 * @inheritDoc
+	 */
 	public function onPageDeleteComplete(
 		ProperPageIdentity $page,
 		Authority $deleter,
@@ -143,5 +166,13 @@ class MainHooks implements
 		int $archivedRevisionCount
 	): void {
 		$this->applicationRepository->onPageUpdate( $page );
+	}
+
+	/**
+	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/ArticlePurge
+	 * @inheritDoc
+	 */
+	public function onArticlePurge( $wikiPage ): void {
+		$this->applicationRepository->onPageUpdate( $wikiPage );
 	}
 }

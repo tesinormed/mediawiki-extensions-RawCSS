@@ -1,6 +1,6 @@
 {
 	"name": "RawCSS",
-	"version": "0.11.1",
+	"version": "0.12.0",
 	"author": [
 		"tesinormed"
 	],
@@ -68,7 +68,8 @@
 		"ResourceLoaderRegisterModules": "main",
 		"BeforePageDisplay": "main",
 		"PageSaveComplete": "main",
-		"PageDeleteComplete": "main"
+		"PageDeleteComplete": "main",
+		"ArticlePurge": "main"
 	},
 	"callback": "MediaWiki\\Extension\\RawCSS\\Hook\\MainHooks::onRegistration",
 	"ServiceWiringFiles": [
