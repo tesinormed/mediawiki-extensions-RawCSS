@@ -118,7 +118,7 @@ class ApplicationRepository {
 			);
 
 			// go through each section
-			$applicationSpecification = [];
+			$applicationSpecification = [ 'styles' => [], 'preload' => [] ];
 			foreach ( $sectionMatches as $sectionMatch ) {
 				[ , $sectionTitle, $sectionVariablesText ] = $sectionMatch;
 
