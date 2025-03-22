@@ -1,6 +1,6 @@
 {
 	"name": "RawCSS",
-	"version": "0.12.1",
+	"version": "0.12.2",
 	"author": [
 		"tesinormed"
 	],
@@ -9,7 +9,7 @@
 	"license-name": "CC0-1.0",
 	"type": "parserhook",
 	"requires": {
-		"MediaWiki": ">= 1.42.0",
+		"MediaWiki": ">= 1.43.0",
 		"platform": {
 			"php": ">= 8.1"
 		}
@@ -63,7 +63,6 @@
 	},
 	"Hooks": {
 		"ParserFirstCallInit": "main",
-		"ContentHandlerDefaultModelFor": "main",
 		"CodeEditorGetPageLanguage": "codeeditor",
 		"ResourceLoaderRegisterModules": "main",
 		"BeforePageDisplay": "main",

@@ -2,27 +2,25 @@
 
 namespace MediaWiki\Extension\RawCSS\Application;
 
-use Content;
+use MediaWiki\Content\Content;
 use MediaWiki\DAO\WikiAwareEntity;
 use MediaWiki\Page\PageReferenceValue;
 use MediaWiki\Page\PageStore;
 use MediaWiki\Page\ProperPageIdentity;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\SlotRecord;
-use WANObjectCache;
+use Wikimedia\ObjectCache\WANObjectCache;
 use Wikimedia\Rdbms\Database;
 use Wikimedia\Rdbms\IConnectionProvider;
 
-/**
- * The repository to find and store RawCSS applications
- */
 class ApplicationRepository {
-	/**
-	 * @var string The page where RawCSS applications are defined
-	 */
 	public const APPLICATIONS_PAGE_NAMESPACE = NS_MEDIAWIKI;
 	public const APPLICATIONS_PAGE_NAME = 'RawCSS-applications';
 	public const APPLICATIONS_PAGE_SCHEMA_VERSION = 2;
+
+	private const APPLICATION_REGEX = '/(*LF)^== *?([\w\-]+|\*) *?==\R((?:^===.+===\R(?:^; *?[\w-]+ *?:.+\R)*)+)/m';
+	private const APPLICATION_SECTION_REGEX = '/(*LF)^=== *(.+?) *===\R((?:^; *?[\w-]+ *?:.+\R)*)/m';
+	private const APPLICATION_SECTION_VARIABLE_REGEX = '/(*LF)^; *?([\w-]+) *?: *(.+?) *$/m';
 
 	private PageStore $pageStore;
 	private RevisionLookup $revisionLookup;
@@ -102,8 +100,10 @@ class ApplicationRepository {
 	}
 
 	private function parseApplicationsPageContent( string $content ): array {
-		preg_match_all( '/(*LF)^== *?([\w\-]+|\*) *?==\R((?:^===.+===\R(?:^; *?[\w-]+ *?:.+\R)*)+)/m',
-			$content, $applicationMatches,
+		preg_match_all(
+			self::APPLICATION_REGEX,
+			$content,
+			$applicationMatches,
 			PREG_SET_ORDER
 		);
 
@@ -112,8 +112,10 @@ class ApplicationRepository {
 		foreach ( $applicationMatches as $applicationMatch ) {
 			[ , $applicationIdentifier, $applicationText ] = $applicationMatch;
 
-			preg_match_all( '/(*LF)^=== *(.+?) *===\R((?:^; *?[\w-]+ *?:.+\R)*)/m',
-				$applicationText, $sectionMatches,
+			preg_match_all(
+				self::APPLICATION_SECTION_REGEX,
+				$applicationText,
+				$sectionMatches,
 				PREG_SET_ORDER
 			);
 
@@ -122,8 +124,10 @@ class ApplicationRepository {
 			foreach ( $sectionMatches as $sectionMatch ) {
 				[ , $sectionTitle, $sectionVariablesText ] = $sectionMatch;
 
-				preg_match_all( '/(*LF)^; *?([\w-]+) *?: *(.+?) *$/m',
-					$sectionVariablesText, $sectionVariableMatches,
+				preg_match_all(
+					self::APPLICATION_SECTION_VARIABLE_REGEX,
+					$sectionVariablesText,
+					$sectionVariableMatches,
 					PREG_SET_ORDER
 				);
 

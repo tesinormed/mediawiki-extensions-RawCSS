@@ -9,9 +9,6 @@ use MediaWiki\MediaWikiServices;
 use MediaWiki\ResourceLoader\Context;
 use MediaWiki\ResourceLoader\Module;
 
-/**
- * A {@link ResourceLoader} {@link Module} for a RawCSS application
- */
 class ApplicationResourceLoaderModule extends Module {
 	private string $applicationId;
 	private ApplicationRepository $applicationRepository;

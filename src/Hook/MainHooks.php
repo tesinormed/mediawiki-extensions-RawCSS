@@ -15,19 +15,16 @@ use MediaWiki\Page\ProperPageIdentity;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\ResourceLoader\Hook\ResourceLoaderRegisterModulesHook;
 use MediaWiki\ResourceLoader\ResourceLoader;
-use MediaWiki\Revision\Hook\ContentHandlerDefaultModelForHook;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
+use MediaWiki\Settings\SettingsBuilder;
 use MediaWiki\Storage\Hook\PageSaveCompleteHook;
 use RuntimeException;
-use WANObjectCache;
+use Wikimedia\ObjectCache\WANObjectCache;
 use Wikimedia\Rdbms\IConnectionProvider;
-
-/** @noinspection PhpUnused */
 
 class MainHooks implements
 	ParserFirstCallInitHook,
-	ContentHandlerDefaultModelForHook,
 	ResourceLoaderRegisterModulesHook,
 	BeforePageDisplayHook,
 	PageSaveCompleteHook,
@@ -51,20 +48,19 @@ class MainHooks implements
 	}
 
 	/**
-	 * @link https://www.mediawiki.org/wiki/Manual:Extension.json/Schema#callback
-	 * @noinspection PhpUnused
+	 * @see https://www.mediawiki.org/wiki/Manual:Extension.json/Schema#callback
 	 */
-	public static function onRegistration(): void {
+	public static function onRegistration( array $extensionInfo, SettingsBuilder $settings ): void {
 		// define the content model constants
 		define( 'CONTENT_MODEL_LESS', 'less' );
 
-		if ( !array_key_exists( 'wgRawCSSAllowedSkins', $GLOBALS ) ) {
+		if ( $settings->getConfig()->get( 'RawCSSAllowedSkins' ) === null ) {
 			throw new RuntimeException( '$wgRawCSSAllowedSkins must be set' );
 		}
 	}
 
 	/**
-	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/ParserFirstCallInit
+	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/ParserFirstCallInit
 	 * @inheritDoc
 	 */
 	public function onParserFirstCallInit( $parser ): void {
@@ -72,21 +68,7 @@ class MainHooks implements
 	}
 
 	/**
-	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/ContentHandlerDefaultModelFor
-	 * @inheritDoc
-	 */
-	public function onContentHandlerDefaultModelFor( $title, &$model ): bool {
-		// RawCSS:*.css
-		if ( $title->getNamespace() == NS_RAWCSS && str_ends_with( $title->getText(), '.css' ) ) {
-			$model = CONTENT_MODEL_CSS;
-			return false;
-		}
-
-		return true;
-	}
-
-	/**
-	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/ResourceLoaderRegisterModules
+	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/ResourceLoaderRegisterModules
 	 * @inheritDoc
 	 */
 	public function onResourceLoaderRegisterModules( ResourceLoader $rl ): void {
@@ -101,7 +83,7 @@ class MainHooks implements
 	}
 
 	/**
-	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/BeforePageDisplay
+	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/BeforePageDisplay
 	 * @inheritDoc
 	 */
 	public function onBeforePageDisplay( $out, $skin ): void {
@@ -115,9 +97,11 @@ class MainHooks implements
 		// if there's no RawCSS module styles on this page
 		if ( $rawCssModuleStyles == [] ) {
 			$wildcardApplication = $this->applicationRepository->getApplicationById( '*' );
+
 			// if there's a wildcard application
 			if ( $wildcardApplication !== null ) {
 				$out->addModuleStyles( [ 'ext.rawcss.*' ] );
+				$rawCssModuleStyles[] = 'ext.rawcss.*';
 			}
 		}
 
@@ -138,7 +122,7 @@ class MainHooks implements
 	}
 
 	/**
-	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/PageSaveComplete
+	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/PageSaveComplete
 	 * @inheritDoc
 	 */
 	public function onPageSaveComplete(
@@ -153,7 +137,7 @@ class MainHooks implements
 	}
 
 	/**
-	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/PageDeleteComplete
+	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/PageDeleteComplete
 	 * @inheritDoc
 	 */
 	public function onPageDeleteComplete(
@@ -169,7 +153,7 @@ class MainHooks implements
 	}
 
 	/**
-	 * @link https://www.mediawiki.org/wiki/Manual:Hooks/ArticlePurge
+	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/ArticlePurge
 	 * @inheritDoc
 	 */
 	public function onArticlePurge( $wikiPage ): void {

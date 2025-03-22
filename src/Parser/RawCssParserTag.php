@@ -5,8 +5,8 @@ namespace MediaWiki\Extension\RawCSS\Parser;
 use MediaWiki\Extension\RawCSS\Application\ApplicationRepository;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Parser\Parser;
-use MessageSpecifier;
-use PPFrame;
+use MediaWiki\Parser\PPFrame;
+use Wikimedia\Message\MessageSpecifier;
 
 class RawCssParserTag {
 	/**

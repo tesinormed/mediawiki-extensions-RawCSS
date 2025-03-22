@@ -1,9 +1,4 @@
 <?php
-/**
- *  Translations of the namespaces introduced by RawCSS.
- *
- * @file
- */
 
 $namespaceNames = [];
 
