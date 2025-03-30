@@ -16,7 +16,7 @@ use Wikimedia\Rdbms\IConnectionProvider;
 class ApplicationRepository {
 	public const APPLICATIONS_PAGE_NAMESPACE = NS_MEDIAWIKI;
 	public const APPLICATIONS_PAGE_NAME = 'RawCSS-applications';
-	public const APPLICATIONS_PAGE_SCHEMA_VERSION = 2;
+	public const APPLICATIONS_PAGE_SCHEMA_VERSION = 3;
 
 	private const APPLICATION_REGEX = '/(*LF)^== *?([\w\-]+|\*) *?==\R((?:^===.+===\R(?:^; *?[\w-]+ *?:.+\R)*)+)/m';
 	private const APPLICATION_SECTION_REGEX = '/(*LF)^=== *(.+?) *===\R((?:^; *?[\w-]+ *?:.+\R)*)/m';
@@ -144,7 +144,10 @@ class ApplicationRepository {
 						continue;
 					}
 					// insert into styles
-					$applicationSpecification['styles'][$sectionTitle] = $sectionVariables;
+					$applicationSpecification['styles'][] = [
+						'pageTitle' => $sectionTitle,
+						'variables' => $sectionVariables
+					];
 				} else {
 					// if this is a preload directive
 					// insert into preload

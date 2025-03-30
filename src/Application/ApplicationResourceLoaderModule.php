@@ -34,7 +34,10 @@ class ApplicationResourceLoaderModule extends Module {
 		$lessParser = new Less_Parser( [ 'compress' => true, 'relativeUrls' => false ] );
 
 		// for each style
-		foreach ( $this->getApplication()['styles'] as $stylePageTitle => $styleVariables ) {
+		foreach ( $this->getApplication()['styles'] as $style ) {
+			$stylePageTitle = $style['pageTitle'];
+			$styleVariables = $style['variables'];
+
 			// get the style page's content
 			$stylePageContent = $this->applicationRepository->getStylePageContent( $stylePageTitle );
 			// make sure it's valid
@@ -49,6 +52,7 @@ class ApplicationResourceLoaderModule extends Module {
 						$lessParser->parse( $stylePageContent->getText() );
 						$lessParser->ModifyVars( $styleVariables );
 						$styles[] = $lessParser->getCss();
+						$lessParser->Reset();
 					} catch ( Exception ) {
 					}
 					break;
