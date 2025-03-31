@@ -4,6 +4,7 @@ namespace MediaWiki\Extension\RawCSS\Application;
 
 use MediaWiki\Content\Content;
 use MediaWiki\DAO\WikiAwareEntity;
+use MediaWiki\Page\ExistingPageRecord;
 use MediaWiki\Page\PageReferenceValue;
 use MediaWiki\Page\PageStore;
 use MediaWiki\Page\ProperPageIdentity;
@@ -159,11 +160,13 @@ class ApplicationRepository {
 		return $applications;
 	}
 
-	public function getStylePageContent( string $stylePageTitle ): ?Content {
-		$stylePage = $this->pageStore->getExistingPageByText( $stylePageTitle, defaultNamespace: NS_RAWCSS );
-		// invalid if the page doesn't exist
-		if ( $stylePage === null ) {
-			return null;
+	public function getStylePageContent( ExistingPageRecord|string $stylePage, bool $lessOnly = false ): ?Content {
+		if ( is_string( $stylePage ) ) {
+			$stylePage = $this->pageStore->getExistingPageByText( $stylePage, defaultNamespace: NS_RAWCSS );
+			// invalid if the page doesn't exist
+			if ( $stylePage === null ) {
+				return null;
+			}
 		}
 
 		$stylePageContent = $this->revisionLookup->getRevisionByTitle( $stylePage )?->getContent( SlotRecord::MAIN );
@@ -171,10 +174,11 @@ class ApplicationRepository {
 		if ( $stylePageContent === null ) {
 			return null;
 		}
+
 		// invalid if the page doesn't have the correct content model
-		if ( $stylePageContent->getModel() !== CONTENT_MODEL_LESS
-			&& $stylePageContent->getModel() !== CONTENT_MODEL_CSS ) {
-			// skip over this
+		if ( ( $stylePageContent->getModel() !== CONTENT_MODEL_LESS
+				&& $stylePageContent->getModel() !== CONTENT_MODEL_CSS )
+			|| ( $lessOnly && $stylePageContent->getModel() === CONTENT_MODEL_CSS ) ) {
 			return null;
 		}
 

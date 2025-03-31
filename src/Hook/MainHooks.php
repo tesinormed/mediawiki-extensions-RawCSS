@@ -32,6 +32,7 @@ class MainHooks implements
 	ArticlePurgeHook
 {
 	private ApplicationRepository $applicationRepository;
+	private RawCssParserTag $rawCssParserTag;
 
 	public function __construct(
 		PageStore $pageStore,
@@ -44,6 +45,9 @@ class MainHooks implements
 			$revisionLookup,
 			$dbProvider,
 			$wanCache
+		);
+		$this->rawCssParserTag = new RawCssParserTag(
+			$this->applicationRepository
 		);
 	}
 
@@ -64,7 +68,7 @@ class MainHooks implements
 	 * @inheritDoc
 	 */
 	public function onParserFirstCallInit( $parser ): void {
-		$parser->setHook( 'rawcss', [ RawCssParserTag::class, 'onParserHook' ] );
+		$parser->setHook( 'rawcss', [ $this->rawCssParserTag, 'onParserHook' ] );
 	}
 
 	/**
@@ -95,7 +99,7 @@ class MainHooks implements
 		);
 
 		// if there's no RawCSS module styles on this page
-		if ( $rawCssModuleStyles == [] ) {
+		if ( empty( $rawCssModuleStyles ) ) {
 			$wildcardApplication = $this->applicationRepository->getApplicationById( '*' );
 
 			// if there's a wildcard application

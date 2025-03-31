@@ -10,7 +10,10 @@
 	"content-model-less": "Less",
 	"rawcss-less-validation-fail": "Failed to validate the Less",
 	"rawcss-tag-missing-ref": "RawCSS: <code>ref</code> attribute is missing",
-	"rawcss-tag-invalid-ref": "RawCSS: <code>ref</code> attribute is invalid (ref <code>$1</code> does not exist in [[{{ns:MediaWiki}}:RawCSS-applications]])",
+	"rawcss-tag-invalid-ref": "RawCSS: <code>ref</code> attribute is invalid (<code>$1</code> does not exist in [[{{ns:MediaWiki}}:RawCSS-applications]])",
+	"rawcss-tag-invalid-src": "RawCSS: <code>src</code> attribute is invalid (<code>$1</code> does not exist or does not have correct content model)",
+	"rawcss-tag-invalid-vars": "RawCSS: <code>vars</code> attribute is invalid (<code>$1</code> does not exist or does not have correct content model)",
+	"rawcss-tag-parsing-exception": "RawCSS: could not parse the combination of <code>$1</code> (<code>src</code>) and <code>$2</code> (<code>vars</code>), check your variables",
 	"rawcss-page-error-category": "Pages with RawCSS errors",
 	"rawcss-page-error-category-desc": "Pages which contain invalid RawCSS parser tags"
 }

@@ -1,6 +1,6 @@
 {
 	"name": "RawCSS",
-	"version": "0.12.3",
+	"version": "0.13.0",
 	"author": [
 		"tesinormed"
 	],
@@ -92,6 +92,13 @@
 		"RawCSS": [
 			"i18n"
 		]
+	},
+	"attributes": {
+		"SyntaxHighlight": {
+			"Models": {
+				"less": "less"
+			}
+		}
 	},
 	"manifest_version": 2
 }
