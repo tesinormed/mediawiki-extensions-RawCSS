@@ -4,7 +4,6 @@ namespace MediaWiki\Extension\RawCSS\Parser;
 
 use Exception;
 use Less_Parser;
-use MediaWiki\Content\CssContent;
 use MediaWiki\Extension\RawCSS\Application\ApplicationRepository;
 use MediaWiki\Extension\RawCSS\Less\LessContent;
 use MediaWiki\Parser\Parser;
@@ -71,7 +70,7 @@ class RawCssParserTag {
 	}
 
 	private static function isPresent( array $params, string $key ): bool {
-		return isset( $params[$key] ) && !empty( trim( $params[$key] ) );
+		return trim( $params[$key] ?? '' ) !== '';
 	}
 
 	private static function formatError( Parser $parser, mixed $key, mixed ...$params ): string {

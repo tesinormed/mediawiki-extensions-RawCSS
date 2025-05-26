@@ -17,16 +17,9 @@ class LessContentHandler extends CodeContentHandler {
 		return $title->getNamespace() === NS_RAWCSS;
 	}
 
-	/**
-	 * @inheritDoc
-	 */
+	/** @inheritDoc */
 	public function validateSave( Content $content, ValidationParams $validationParams ): StatusValue {
 		/** @var LessContent $content */
-		$status = parent::validateSave( $content, $validationParams );
-		if ( !$status->isGood() ) {
-			return $content->validate();
-		} else {
-			return $status;
-		}
+		return $content->validate();
 	}
 }

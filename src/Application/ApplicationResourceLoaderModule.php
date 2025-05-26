@@ -2,11 +2,7 @@
 
 namespace MediaWiki\Extension\RawCSS\Application;
 
-use Exception;
-use Less_Parser;
 use MediaWiki\Config\Config;
-use MediaWiki\Content\CssContent;
-use MediaWiki\Extension\RawCSS\Less\LessContent;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\ResourceLoader\Context;
 use MediaWiki\ResourceLoader\Module;
@@ -32,42 +28,7 @@ class ApplicationResourceLoaderModule extends Module {
 			return [];
 		}
 
-		$styles = [];
-		$lessParser = new Less_Parser();
-
-		// for each style
-		foreach ( $this->getApplication()['styles'] as $style ) {
-			$stylePageTitle = $style['pageTitle'];
-			$styleVariables = [ 'rawcss-application-id' => $this->applicationId ] + $style['variables'];
-
-			// get the style page's content
-			$stylePageContent = $this->applicationRepository->getStylePageContent( $stylePageTitle );
-			// make sure it's valid
-			if ( $stylePageContent === null ) {
-				continue;
-			}
-
-			switch ( $stylePageContent->getModel() ) {
-				case CONTENT_MODEL_LESS:
-					// parse the Less
-					try {
-						/** @var LessContent $stylePageContent */
-						$lessParser->parse( $stylePageContent->getText() );
-						$lessParser->ModifyVars( $styleVariables );
-						$styles[] = $lessParser->getCss();
-						$lessParser->Reset();
-					} catch ( Exception ) {
-						$lessParser->Reset();
-					}
-					break;
-				case CONTENT_MODEL_CSS:
-					// add it directly
-					/** @var CssContent $stylePageContent */
-					$styles[] = $stylePageContent->getText();
-			}
-		}
-
-		return [ 'all' => $styles ];
+		return [ 'all' => array_values( $this->getApplication() ) ];
 	}
 
 	public function getSkins(): ?array {

@@ -2,14 +2,19 @@
 
 namespace MediaWiki\Extension\RawCSS\Application;
 
+use Exception;
+use Less_Parser;
 use MediaWiki\Content\Content;
+use MediaWiki\Content\CssContent;
+use MediaWiki\Content\WikitextContent;
 use MediaWiki\DAO\WikiAwareEntity;
-use MediaWiki\Page\ExistingPageRecord;
+use MediaWiki\Extension\RawCSS\Less\LessContent;
+use MediaWiki\Page\PageLookup;
 use MediaWiki\Page\PageReferenceValue;
-use MediaWiki\Page\PageStore;
 use MediaWiki\Page\ProperPageIdentity;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\SlotRecord;
+use Wikimedia\LightweightObjectStore\ExpirationAwareness;
 use Wikimedia\ObjectCache\WANObjectCache;
 use Wikimedia\Rdbms\Database;
 use Wikimedia\Rdbms\IConnectionProvider;
@@ -17,24 +22,23 @@ use Wikimedia\Rdbms\IConnectionProvider;
 class ApplicationRepository {
 	public const APPLICATIONS_PAGE_NAMESPACE = NS_MEDIAWIKI;
 	public const APPLICATIONS_PAGE_NAME = 'RawCSS-applications';
-	public const APPLICATIONS_PAGE_SCHEMA_VERSION = 3;
 
 	private const APPLICATION_REGEX = '/(*LF)^== *?([\w\-]+|\*) *?==\R((?:^===.+===\R(?:^; *?[\w-]+ *?:.+\R)*)+)/m';
 	private const APPLICATION_SECTION_REGEX = '/(*LF)^=== *(.+?) *===\R((?:^; *?[\w-]+ *?:.+\R)*)/m';
 	private const APPLICATION_SECTION_VARIABLE_REGEX = '/(*LF)^; *?([\w-]+) *?: *(.+?) *$/m';
 
-	private PageStore $pageStore;
+	private PageLookup $pageLookup;
 	private RevisionLookup $revisionLookup;
 	private IConnectionProvider $dbProvider;
 	private WANObjectCache $wanCache;
 
 	public function __construct(
-		PageStore $pageStore,
+		PageLookup $pageLookup,
 		RevisionLookup $revisionLookup,
 		IConnectionProvider $dbProvider,
 		WANObjectCache $wanCache
 	) {
-		$this->pageStore = $pageStore;
+		$this->pageLookup = $pageLookup;
 		$this->revisionLookup = $revisionLookup;
 		$this->dbProvider = $dbProvider;
 		$this->wanCache = $wanCache;
@@ -48,42 +52,51 @@ class ApplicationRepository {
 		$this->wanCache->touchCheckKey( $this->makeCacheKey() );
 	}
 
-	public function getApplicationIds(): array {
+	public function getApplicationIdentifiers(): array {
 		return array_keys( $this->getApplications() );
 	}
 
 	public function getApplicationById( string $id ): ?array {
-		$applications = $this->getApplications();
-		if ( !array_key_exists( key: $id, array: $applications ) ) {
-			return null;
-		} else {
-			return $applications[$id];
+		return $this->getApplications()[$id] ?? null;
+	}
+
+	private function isUsedByAnyApplication( ProperPageIdentity $pageIdentity ): bool {
+		foreach ( $this->getApplications() as $application ) {
+			if ( array_key_exists( $pageIdentity->getDBkey(), array_keys( $application ) ) ) {
+				return true;
+			}
 		}
+
+		return false;
 	}
 
 	public function getApplications(): array {
-		// get the applications from the cache if it exists; otherwise create it
 		return $this->wanCache->getWithSetCallback(
 			$this->makeCacheKey(),
-			$this->wanCache::TTL_DAY,
+			ExpirationAwareness::TTL_DAY,
 			function ( $oldValue, &$ttl, array &$setOpts ) {
 				$setOpts += Database::getCacheSetOptions( $this->dbProvider->getReplicaDatabase() );
 
 				// get the applications page
-				$applicationsPage = $this->pageStore
-					->getPageByName( self::APPLICATIONS_PAGE_NAMESPACE, self::APPLICATIONS_PAGE_NAME );
+				$applicationsPage = $this->pageLookup->getPageByName(
+					self::APPLICATIONS_PAGE_NAMESPACE,
+					self::APPLICATIONS_PAGE_NAME
+				);
 				// if the applications page doesn't exist, exit
 				if ( $applicationsPage === null ) {
+					$ttl = ExpirationAwareness::TTL_UNCACHEABLE;
 					return [];
 				}
 
 				// get the applications revision
-				$revisionRecord = $this->revisionLookup
-					->getRevisionByTitle( $applicationsPage );
+				$revisionRecord = $this->revisionLookup->getRevisionByTitle( $applicationsPage );
 				// make sure the list page is readable
-				if ( !$revisionRecord
+				if ( $revisionRecord === null
 					|| !$revisionRecord->getContent( SlotRecord::MAIN )
-					|| $revisionRecord->getContent( SlotRecord::MAIN )->isEmpty() ) {
+					|| $revisionRecord->getContent( SlotRecord::MAIN )->isEmpty()
+					|| !$revisionRecord->getContent( SlotRecord::MAIN ) instanceof WikitextContent
+				) {
+					$ttl = ExpirationAwareness::TTL_UNCACHEABLE;
 					return [];
 				}
 
@@ -93,9 +106,10 @@ class ApplicationRepository {
 				);
 			},
 			[
-				'version' => self::APPLICATIONS_PAGE_SCHEMA_VERSION,
+				'version' => 4,
 				'checkKeys' => [ $this->makeCacheKey() ],
-				'lockTSE' => 300,
+				'pcTTL' => ExpirationAwareness::TTL_PROC_SHORT,
+				'lockTSE' => 30,
 			]
 		);
 	}
@@ -121,7 +135,7 @@ class ApplicationRepository {
 			);
 
 			// go through each section
-			$applicationSpecification = [ 'styles' => [], 'preload' => [] ];
+			$applicationSpecification = [];
 			foreach ( $sectionMatches as $sectionMatch ) {
 				[ , $sectionTitle, $sectionVariablesText ] = $sectionMatch;
 
@@ -138,31 +152,66 @@ class ApplicationRepository {
 					$sectionVariables[$styleVariableMatch[1]] = $styleVariableMatch[2];
 				}
 
-				if ( !str_starts_with( $sectionTitle, '__preload' ) ) {
-					// if this isn't a preload directive
-					// make sure it's a valid style page
-					if ( $this->getStylePageContent( $sectionTitle ) === null ) {
-						continue;
-					}
-					// insert into styles
-					$applicationSpecification['styles'][] = [
-						'pageTitle' => $sectionTitle,
-						'variables' => $sectionVariables
-					];
-				} else {
-					// if this is a preload directive
-					// insert into preload
-					$applicationSpecification['preload'][] = $sectionVariables;
-				}
+				// insert
+				$applicationSpecification[$sectionTitle] = $sectionVariables;
 			}
 			$applications[$applicationIdentifier] = $applicationSpecification;
 		}
+
+		$lessParser = new Less_Parser();
+
+		foreach ( $applications as $applicationIdentifier => $applicationSpecification ) {
+			$application = [];
+
+			foreach ( $applicationSpecification as $page => $variables ) {
+				$styleVariables = [ 'rawcss-application-id' => $applicationIdentifier ] + $variables;
+				$stylePage = $this->pageLookup->getPageByText( $page, defaultNamespace: NS_RAWCSS );
+				if ( $stylePage === null ) {
+					continue;
+				}
+				if ( !$stylePage->exists() ) {
+					$application[$stylePage->getDBkey()] = '';
+				}
+
+				// get the style page's content
+				$stylePageContent = $this->getStylePageContent( $stylePage );
+				// make sure it's valid
+				if ( $stylePageContent === null ) {
+					continue;
+				}
+
+				switch ( $stylePageContent->getModel() ) {
+					case CONTENT_MODEL_LESS:
+						// parse the Less
+						try {
+							/** @var LessContent $stylePageContent */
+							$lessParser->parse( $stylePageContent->getText() );
+							$lessParser->ModifyVars( $styleVariables );
+							$application[$stylePage->getDBkey()] = $lessParser->getCss();
+						} catch ( Exception ) {
+							$application[$stylePage->getDBkey()] = '';
+						} finally {
+							$lessParser->Reset();
+						}
+						break;
+					case CONTENT_MODEL_CSS:
+						// add it directly
+						/** @var CssContent $stylePageContent */
+						$application[$stylePage->getDBkey()] = $stylePageContent->getText();
+						break;
+				}
+			}
+
+			$applications[$applicationIdentifier] = $application;
+		}
+
 		return $applications;
 	}
 
-	public function getStylePageContent( ExistingPageRecord|string $stylePage, bool $lessOnly = false ): ?Content {
+	public function getStylePageContent( ProperPageIdentity|string $stylePage, bool $lessOnly = false ): ?Content {
 		if ( is_string( $stylePage ) ) {
-			$stylePage = $this->pageStore->getExistingPageByText( $stylePage, defaultNamespace: NS_RAWCSS );
+			$stylePage = $this->pageLookup->getExistingPageByText( $stylePage, defaultNamespace: NS_RAWCSS );
+
 			// invalid if the page doesn't exist
 			if ( $stylePage === null ) {
 				return null;
@@ -176,9 +225,10 @@ class ApplicationRepository {
 		}
 
 		// invalid if the page doesn't have the correct content model
-		if ( ( $stylePageContent->getModel() !== CONTENT_MODEL_LESS
-				&& $stylePageContent->getModel() !== CONTENT_MODEL_CSS )
-			|| ( $lessOnly && $stylePageContent->getModel() === CONTENT_MODEL_CSS ) ) {
+		if ( !$stylePageContent instanceof LessContent && !$stylePageContent instanceof CssContent ) {
+			return null;
+		}
+		if ( $lessOnly && $stylePageContent instanceof CssContent ) {
 			return null;
 		}
 
@@ -193,6 +243,10 @@ class ApplicationRepository {
 			dbKey: self::APPLICATIONS_PAGE_NAME,
 			wikiId: WikiAwareEntity::LOCAL
 		) ) ) {
+			$this->purgeCache();
+		}
+
+		if ( $this->isUsedByAnyApplication( $page ) ) {
 			$this->purgeCache();
 		}
 	}

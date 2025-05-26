@@ -12,10 +12,8 @@ class LessContent extends TextContent {
 		parent::__construct( $text, $modelId );
 	}
 
-	/**
-	 * @inheritDoc
-	 */
-	public function isValid() {
+	/** @inheritDoc */
+	public function isValid(): bool {
 		return $this->validate()->isGood();
 	}
 

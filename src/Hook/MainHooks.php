@@ -46,9 +46,7 @@ class MainHooks implements
 			$dbProvider,
 			$wanCache
 		);
-		$this->rawCssParserTag = new RawCssParserTag(
-			$this->applicationRepository
-		);
+		$this->rawCssParserTag = new RawCssParserTag( $this->applicationRepository );
 	}
 
 	/**
@@ -77,7 +75,7 @@ class MainHooks implements
 	 */
 	public function onResourceLoaderRegisterModules( ResourceLoader $rl ): void {
 		// for each application
-		foreach ( $this->applicationRepository->getApplicationIds() as $id ) {
+		foreach ( $this->applicationRepository->getApplicationIdentifiers() as $id ) {
 			// register it with ResourceLoader
 			$rl->register( "ext.rawcss.$id", [
 				'class' => ApplicationResourceLoaderModule::class,
@@ -99,28 +97,12 @@ class MainHooks implements
 		);
 
 		// if there's no RawCSS module styles on this page
-		if ( empty( $rawCssModuleStyles ) ) {
+		if ( count( $rawCssModuleStyles ) === 0 ) {
 			$wildcardApplication = $this->applicationRepository->getApplicationById( '*' );
 
 			// if there's a wildcard application
 			if ( $wildcardApplication !== null ) {
 				$out->addModuleStyles( [ 'ext.rawcss.*' ] );
-				$rawCssModuleStyles[] = 'ext.rawcss.*';
-			}
-		}
-
-		// for each of the RawCSS module styles
-		foreach ( $rawCssModuleStyles as $rawCssModuleStyle ) {
-			$application = $this->applicationRepository->getApplicationById(
-				preg_replace( '/^ext\.rawcss\./', '', $rawCssModuleStyle )
-			);
-
-			foreach ( $application['preload'] as $preload ) {
-				// add the preload directives
-				$out->addLink( [
-					'rel' => 'preload',
-					...$preload,
-				] );
 			}
 		}
 	}
