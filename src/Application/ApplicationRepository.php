@@ -13,6 +13,7 @@ use MediaWiki\Page\PageLookup;
 use MediaWiki\Page\PageReferenceValue;
 use MediaWiki\Page\ProperPageIdentity;
 use MediaWiki\Revision\RevisionLookup;
+use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Revision\SlotRecord;
 use Wikimedia\LightweightObjectStore\ExpirationAwareness;
 use Wikimedia\ObjectCache\WANObjectCache;
@@ -52,7 +53,7 @@ class ApplicationRepository {
 		$this->wanCache->touchCheckKey( $this->makeCacheKey() );
 	}
 
-	public function getApplicationIdentifiers(): array {
+	public function getApplicationIds(): array {
 		return array_keys( $this->getApplications() );
 	}
 
@@ -106,7 +107,7 @@ class ApplicationRepository {
 				);
 			},
 			[
-				'version' => 4,
+				'version' => 5,
 				'checkKeys' => [ $this->makeCacheKey() ],
 				'pcTTL' => ExpirationAwareness::TTL_PROC_SHORT,
 				'lockTSE' => 30,
@@ -125,7 +126,7 @@ class ApplicationRepository {
 		// go through each application
 		$applications = [];
 		foreach ( $applicationMatches as $applicationMatch ) {
-			[ , $applicationIdentifier, $applicationText ] = $applicationMatch;
+			[ , $applicationId, $applicationText ] = $applicationMatch;
 
 			preg_match_all(
 				self::APPLICATION_SECTION_REGEX,
@@ -155,28 +156,42 @@ class ApplicationRepository {
 				// insert
 				$applicationSpecification[$sectionTitle] = $sectionVariables;
 			}
-			$applications[$applicationIdentifier] = $applicationSpecification;
+			$applications[$applicationId] = $applicationSpecification;
 		}
 
 		$lessParser = new Less_Parser();
 
-		foreach ( $applications as $applicationIdentifier => $applicationSpecification ) {
+		foreach ( $applications as $applicationId => $applicationSpecification ) {
 			$application = [];
 
 			foreach ( $applicationSpecification as $page => $variables ) {
-				$styleVariables = [ 'rawcss-application-id' => $applicationIdentifier ] + $variables;
+				$styleVariables = [ 'rawcss-application-id' => $applicationId ] + $variables;
 				$stylePage = $this->pageLookup->getPageByText( $page, defaultNamespace: NS_RAWCSS );
 				if ( $stylePage === null ) {
+					// invalid page
 					continue;
 				}
 				if ( !$stylePage->exists() ) {
-					$application[$stylePage->getDBkey()] = '';
+					// could exist in the future; keep this in the application so it gets purged when that page exists
+					$application[$stylePage->getDBkey()] = [
+						'revision' => 0,
+						'variables' => $variables,
+						'styles' => ''
+					];
+					continue;
 				}
 
 				// get the style page's content
-				$stylePageContent = $this->getStylePageContent( $stylePage );
+				$stylePageRevision = $this->revisionLookup->getRevisionByTitle( $stylePage );
+				$stylePageContent = $this->getStylePageRevisionContent( $stylePageRevision );
 				// make sure it's valid
 				if ( $stylePageContent === null ) {
+					// keep this in the application so it gets purged when that page is edited
+					$application[$stylePage->getDBkey()] = [
+						'revision' => 0,
+						'variables' => $variables,
+						'styles' => ''
+					];
 					continue;
 				}
 
@@ -187,9 +202,18 @@ class ApplicationRepository {
 							/** @var LessContent $stylePageContent */
 							$lessParser->parse( $stylePageContent->getText() );
 							$lessParser->ModifyVars( $styleVariables );
-							$application[$stylePage->getDBkey()] = $lessParser->getCss();
+							$application[$stylePage->getDBkey()] = [
+								'revision' => $stylePageRevision->getId(),
+								'variables' => $variables,
+								'styles' => $lessParser->getCss()
+							];
 						} catch ( Exception ) {
-							$application[$stylePage->getDBkey()] = '';
+							// keep this in the application so it gets purged when that page is edited
+							$application[$stylePage->getDBkey()] = [
+								'revision' => 0,
+								'variables' => $variables,
+								'styles' => ''
+							];
 						} finally {
 							$lessParser->Reset();
 						}
@@ -197,43 +221,54 @@ class ApplicationRepository {
 					case CONTENT_MODEL_CSS:
 						// add it directly
 						/** @var CssContent $stylePageContent */
-						$application[$stylePage->getDBkey()] = $stylePageContent->getText();
+						$application[$stylePage->getDBkey()] = [
+							'revision' => $stylePageRevision->getId(),
+							'variables' => $variables,
+							'styles' => $stylePageContent->getText()
+						];
 						break;
 				}
 			}
 
-			$applications[$applicationIdentifier] = $application;
+			$applications[$applicationId] = $application;
 		}
 
 		return $applications;
 	}
 
-	public function getStylePageContent( ProperPageIdentity|string $stylePage, bool $lessOnly = false ): ?Content {
-		if ( is_string( $stylePage ) ) {
-			$stylePage = $this->pageLookup->getExistingPageByText( $stylePage, defaultNamespace: NS_RAWCSS );
+	public function getStylePageContent( ProperPageIdentity|string $page, bool $lessOnly = false ): ?Content {
+		if ( is_string( $page ) ) {
+			// turn this into a ProperPageIdentity
+			$page = $this->pageLookup->getExistingPageByText( $page, defaultNamespace: NS_RAWCSS );
 
-			// invalid if the page doesn't exist
-			if ( $stylePage === null ) {
+			// if the page is invalid or doesn't exist
+			if ( $page === null ) {
 				return null;
 			}
 		}
 
-		$stylePageContent = $this->revisionLookup->getRevisionByTitle( $stylePage )?->getContent( SlotRecord::MAIN );
-		// invalid if the content is null
-		if ( $stylePageContent === null ) {
+		return $this->getStylePageRevisionContent(
+			$this->revisionLookup->getRevisionByTitle( $page ),
+			$lessOnly
+		);
+	}
+
+	private function getStylePageRevisionContent( ?RevisionRecord $revision, bool $lessOnly = false ): ?Content {
+		$content = $revision?->getContent( SlotRecord::MAIN );
+		// invalid if the revision or content is null
+		if ( $content === null ) {
 			return null;
 		}
 
 		// invalid if the page doesn't have the correct content model
-		if ( !$stylePageContent instanceof LessContent && !$stylePageContent instanceof CssContent ) {
+		if ( !$content instanceof LessContent && !$content instanceof CssContent ) {
 			return null;
-		}
-		if ( $lessOnly && $stylePageContent instanceof CssContent ) {
+		} elseif ( $lessOnly && $content instanceof CssContent ) {
 			return null;
 		}
 
 		// valid
-		return $stylePageContent;
+		return $content;
 	}
 
 	public function onPageUpdate( ProperPageIdentity $page ): void {
@@ -246,6 +281,7 @@ class ApplicationRepository {
 			$this->purgeCache();
 		}
 
+		// if this page is used in any application, purge the cache
 		if ( $this->isUsedByAnyApplication( $page ) ) {
 			$this->purgeCache();
 		}

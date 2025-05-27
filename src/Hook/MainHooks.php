@@ -75,7 +75,7 @@ class MainHooks implements
 	 */
 	public function onResourceLoaderRegisterModules( ResourceLoader $rl ): void {
 		// for each application
-		foreach ( $this->applicationRepository->getApplicationIdentifiers() as $id ) {
+		foreach ( $this->applicationRepository->getApplicationIds() as $id ) {
 			// register it with ResourceLoader
 			$rl->register( "ext.rawcss.$id", [
 				'class' => ApplicationResourceLoaderModule::class,
@@ -93,6 +93,7 @@ class MainHooks implements
 		$rawCssModuleStyles = array_filter(
 			$out->getModuleStyles(),
 			static fn ( $moduleStyle ) => str_starts_with( $moduleStyle, 'ext.rawcss.' )
+				// ignore anything that ends with __ignore_for_wildcard
 				&& !str_ends_with( $moduleStyle, '__ignore_for_wildcard' )
 		);
 
@@ -102,6 +103,7 @@ class MainHooks implements
 
 			// if there's a wildcard application
 			if ( $wildcardApplication !== null ) {
+				// use the wildcard module style
 				$out->addModuleStyles( [ 'ext.rawcss.*' ] );
 			}
 		}

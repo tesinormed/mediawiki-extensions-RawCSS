@@ -6,15 +6,14 @@ use Exception;
 use Less_Parser;
 use MediaWiki\Extension\RawCSS\Application\ApplicationRepository;
 use MediaWiki\Extension\RawCSS\Less\LessContent;
+use MediaWiki\Html\Html;
 use MediaWiki\Parser\Parser;
 use MediaWiki\Parser\PPFrame;
 
 class RawCssParserTag {
 	private ApplicationRepository $applicationRepository;
 
-	public function __construct(
-		ApplicationRepository $applicationRepository
-	) {
+	public function __construct( ApplicationRepository $applicationRepository ) {
 		$this->applicationRepository = $applicationRepository;
 	}
 
@@ -60,7 +59,7 @@ class RawCssParserTag {
 		try {
 			$lessParser->parse( $sourceContent->getText() );
 			$lessParser->parse( $variablesContent->getText() );
-			return [ '<style>' . $lessParser->getCss() . '</style>', 'markerType' => 'nowiki' ];
+			return [ Html::rawElement( 'style', contents: $lessParser->getCss() ), 'markerType' => 'nowiki' ];
 		} catch ( Exception ) {
 			return self::formatError( $parser, 'rawcss-tag-parsing-exception',
 				wfEscapeWikiText( $source ),

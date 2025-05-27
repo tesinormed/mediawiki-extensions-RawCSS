@@ -19,7 +19,7 @@ class ApplicationResourceLoaderModule extends Module {
 	}
 
 	public function getApplication(): array {
-		return $this->applicationRepository->getApplicationById( $this->applicationId );
+		return array_values( $this->applicationRepository->getApplicationById( $this->applicationId ) );
 	}
 
 	public function getStyles( Context $context ): array {
@@ -28,7 +28,7 @@ class ApplicationResourceLoaderModule extends Module {
 			return [];
 		}
 
-		return [ 'all' => array_values( $this->getApplication() ) ];
+		return [ 'all' => array_column( $this->getApplication(), 'styles' ) ];
 	}
 
 	public function getSkins(): ?array {
@@ -50,8 +50,8 @@ class ApplicationResourceLoaderModule extends Module {
 	public function getDefinitionSummary( Context $context ): array {
 		$summary = parent::getDefinitionSummary( $context );
 		// use the application specification as determiners
-		$summary['styles'] = $this->getApplication()['styles'];
-		$summary['preload'] = $this->getApplication()['preload'];
+		$summary['revision'] = array_column( $this->getApplication(), 'revision' );
+		$summary['variables'] = array_column( $this->getApplication(), 'variables' );
 		return $summary;
 	}
 }
