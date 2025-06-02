@@ -14,6 +14,7 @@
 	"rawcss-tag-invalid-src": "RawCSS: <code>src</code> attribute is invalid (<code>$1</code> does not exist or does not have correct content model)",
 	"rawcss-tag-invalid-vars": "RawCSS: <code>vars</code> attribute is invalid (<code>$1</code> does not exist or does not have correct content model)",
 	"rawcss-tag-parsing-exception": "RawCSS: could not parse the combination of <code>$1</code> (<code>src</code>) and <code>$2</code> (<code>vars</code>), check your variables",
+	"rawcss-edit-not-allowed": "RawCSS: You do not have permission to edit this page",
 	"rawcss-page-error-category": "Pages with RawCSS errors",
 	"rawcss-page-error-category-desc": "Pages which contain invalid RawCSS parser tags"
 }

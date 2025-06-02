@@ -8,6 +8,7 @@ return [
 		return new ApplicationRepository(
 			$services->getPageStore(),
 			$services->getRevisionStore(),
+			$services->getPermissionManager(),
 			$services->getConnectionProvider(),
 			$services->getMainWANObjectCache()
 		);

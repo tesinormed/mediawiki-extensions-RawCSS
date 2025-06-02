@@ -1,5 +1,6 @@
 {
 	"require": {
+		"ext-mbstring": "*"
 	},
 	"require-dev": {
 		"mediawiki/mediawiki-codesniffer": "45.0.0",

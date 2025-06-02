@@ -1,6 +1,6 @@
 {
 	"name": "RawCSS",
-	"version": "0.15.0",
+	"version": "0.16.0",
 	"author": [
 		"tesinormed"
 	],
@@ -53,6 +53,7 @@
 			"services": [
 				"PageStore",
 				"RevisionStore",
+				"PermissionManager",
 				"ConnectionProvider",
 				"MainWANObjectCache"
 			]
@@ -68,7 +69,8 @@
 		"BeforePageDisplay": "main",
 		"PageSaveComplete": "main",
 		"PageDeleteComplete": "main",
-		"ArticlePurge": "main"
+		"ArticlePurge": "main",
+		"EditFilterMergedContent": "main"
 	},
 	"callback": "MediaWiki\\Extension\\RawCSS\\Hook\\MainHooks::onRegistration",
 	"ServiceWiringFiles": [

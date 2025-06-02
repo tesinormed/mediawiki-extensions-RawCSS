@@ -8,13 +8,17 @@ use MediaWiki\Content\Content;
 use MediaWiki\Content\CssContent;
 use MediaWiki\Content\WikitextContent;
 use MediaWiki\DAO\WikiAwareEntity;
+use MediaWiki\EditPage\EditPage;
 use MediaWiki\Extension\RawCSS\Less\LessContent;
 use MediaWiki\Page\PageLookup;
 use MediaWiki\Page\PageReferenceValue;
 use MediaWiki\Page\ProperPageIdentity;
+use MediaWiki\Permissions\PermissionManager;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Revision\SlotRecord;
+use MediaWiki\Status\Status;
+use MediaWiki\User\User;
 use Wikimedia\LightweightObjectStore\ExpirationAwareness;
 use Wikimedia\ObjectCache\WANObjectCache;
 use Wikimedia\Rdbms\Database;
@@ -28,19 +32,24 @@ class ApplicationRepository {
 	private const APPLICATION_SECTION_REGEX = '/(*LF)^=== *(.+?) *===\R((?:^; *?[\w-]+ *?:.+\R)*)/m';
 	private const APPLICATION_SECTION_VARIABLE_REGEX = '/(*LF)^; *?([\w-]+) *?: *(.+?) *$/m';
 
+	private const STYLE_PAGE_ALLOWED_REGEX = '/\/\*\s*RawCSS-allowed:\s*(.+?)\s*\*\//m';
+
 	private PageLookup $pageLookup;
 	private RevisionLookup $revisionLookup;
+	private PermissionManager $permissionManager;
 	private IConnectionProvider $dbProvider;
 	private WANObjectCache $wanCache;
 
 	public function __construct(
 		PageLookup $pageLookup,
 		RevisionLookup $revisionLookup,
+		PermissionManager $permissionManager,
 		IConnectionProvider $dbProvider,
 		WANObjectCache $wanCache
 	) {
 		$this->pageLookup = $pageLookup;
 		$this->revisionLookup = $revisionLookup;
+		$this->permissionManager = $permissionManager;
 		$this->dbProvider = $dbProvider;
 		$this->wanCache = $wanCache;
 	}
@@ -285,5 +294,30 @@ class ApplicationRepository {
 		if ( $this->isUsedByAnyApplication( $page ) ) {
 			$this->purgeCache();
 		}
+	}
+
+	public function onEditFilter( User $user, Content $content, Status $status ): bool {
+		if ( !$content instanceof CssContent ) {
+			return true;
+		}
+
+		if ( in_array( 'editinterface', $this->permissionManager->getUserPermissions( $user ), strict: true ) ) {
+			return true;
+		}
+
+		$contentText = $content->getText();
+		if ( !preg_match( self::STYLE_PAGE_ALLOWED_REGEX, $contentText, $allowedUsers ) ) {
+			return true;
+		}
+
+		$allowedUsers = array_map( static fn ( string $user ) => trim( $user ), mb_split( ',', $allowedUsers[1] ) );
+		if ( in_array( $user->getName(), $allowedUsers, strict: true ) ) {
+			return true;
+		}
+
+		$status->value = EditPage::AS_HOOK_ERROR_EXPECTED;
+		$status->statusData = [];
+		$status->fatal( 'rawcss-edit-not-allowed' );
+		return false;
 	}
 }

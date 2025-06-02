@@ -3,9 +3,12 @@
 namespace MediaWiki\Extension\RawCSS\Hook;
 
 use ManualLogEntry;
+use MediaWiki\Content\Content;
+use MediaWiki\Context\IContextSource;
 use MediaWiki\Extension\RawCSS\Application\ApplicationRepository;
 use MediaWiki\Extension\RawCSS\Application\ApplicationResourceLoaderModule;
 use MediaWiki\Extension\RawCSS\Parser\RawCssParserTag;
+use MediaWiki\Hook\EditFilterMergedContentHook;
 use MediaWiki\Hook\ParserFirstCallInitHook;
 use MediaWiki\Output\Hook\BeforePageDisplayHook;
 use MediaWiki\Page\Hook\ArticlePurgeHook;
@@ -13,12 +16,15 @@ use MediaWiki\Page\Hook\PageDeleteCompleteHook;
 use MediaWiki\Page\PageStore;
 use MediaWiki\Page\ProperPageIdentity;
 use MediaWiki\Permissions\Authority;
+use MediaWiki\Permissions\PermissionManager;
 use MediaWiki\ResourceLoader\Hook\ResourceLoaderRegisterModulesHook;
 use MediaWiki\ResourceLoader\ResourceLoader;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Settings\SettingsBuilder;
+use MediaWiki\Status\Status;
 use MediaWiki\Storage\Hook\PageSaveCompleteHook;
+use MediaWiki\User\User;
 use RuntimeException;
 use Wikimedia\ObjectCache\WANObjectCache;
 use Wikimedia\Rdbms\IConnectionProvider;
@@ -29,7 +35,8 @@ class MainHooks implements
 	BeforePageDisplayHook,
 	PageSaveCompleteHook,
 	PageDeleteCompleteHook,
-	ArticlePurgeHook
+	ArticlePurgeHook,
+	EditFilterMergedContentHook
 {
 	private ApplicationRepository $applicationRepository;
 	private RawCssParserTag $rawCssParserTag;
@@ -37,12 +44,14 @@ class MainHooks implements
 	public function __construct(
 		PageStore $pageStore,
 		RevisionLookup $revisionLookup,
+		PermissionManager $permissionManager,
 		IConnectionProvider $dbProvider,
 		WANObjectCache $wanCache
 	) {
 		$this->applicationRepository = new ApplicationRepository(
 			$pageStore,
 			$revisionLookup,
+			$permissionManager,
 			$dbProvider,
 			$wanCache
 		);
@@ -146,5 +155,20 @@ class MainHooks implements
 	 */
 	public function onArticlePurge( $wikiPage ): void {
 		$this->applicationRepository->onPageUpdate( $wikiPage );
+	}
+
+	/**
+	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/EditFilterMergedContent
+	 * @inheritDoc
+	 */
+	public function onEditFilterMergedContent(
+		IContextSource $context,
+		Content $content,
+		Status $status,
+		$summary,
+		User $user,
+		$minoredit
+	): bool {
+		return $this->applicationRepository->onEditFilter( $user, $content, $status );
 	}
 }
