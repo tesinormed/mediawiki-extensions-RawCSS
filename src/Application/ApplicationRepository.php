@@ -23,6 +23,7 @@ use Wikimedia\LightweightObjectStore\ExpirationAwareness;
 use Wikimedia\ObjectCache\WANObjectCache;
 use Wikimedia\Rdbms\Database;
 use Wikimedia\Rdbms\IConnectionProvider;
+use WikiPage;
 
 class ApplicationRepository {
 	public const APPLICATIONS_PAGE_NAMESPACE = NS_MEDIAWIKI;
@@ -72,7 +73,7 @@ class ApplicationRepository {
 
 	private function isUsedByAnyApplication( ProperPageIdentity $pageIdentity ): bool {
 		foreach ( $this->getApplications() as $application ) {
-			if ( array_key_exists( $pageIdentity->getDBkey(), array_keys( $application ) ) ) {
+			if ( array_key_exists( $pageIdentity->getDBkey(), $application ) ) {
 				return true;
 			}
 		}
@@ -296,28 +297,31 @@ class ApplicationRepository {
 		}
 	}
 
-	public function onEditFilter( User $user, Content $content, Status $status ): bool {
-		if ( !$content instanceof CssContent ) {
+	public function onEditFilter( User $user, WikiPage $wikiPage, Status $status ): bool {
+		if ( !$this->isUsedByAnyApplication( $wikiPage ) ) {
 			return true;
 		}
 
-		if ( in_array( 'editinterface', $this->permissionManager->getUserPermissions( $user ), strict: true ) ) {
+		if ( $wikiPage->getContentModel() !== CONTENT_MODEL_CSS ) {
 			return true;
 		}
 
-		$contentText = $content->getText();
+		if ( $this->permissionManager->userHasRight( $user, 'editinterface' ) ) {
+			return true;
+		}
+
+		$contentText = $wikiPage->getContent()->getText();
 		if ( !preg_match( self::STYLE_PAGE_ALLOWED_REGEX, $contentText, $allowedUsers ) ) {
 			return true;
 		}
 
-		$allowedUsers = array_map( static fn ( string $user ) => trim( $user ), mb_split( ',', $allowedUsers[1] ) );
+		$allowedUsers = array_map( 'trim', explode( ',', $allowedUsers[1] ) );
 		if ( in_array( $user->getName(), $allowedUsers, strict: true ) ) {
 			return true;
 		}
 
-		$status->value = EditPage::AS_HOOK_ERROR_EXPECTED;
-		$status->statusData = [];
 		$status->fatal( 'rawcss-edit-not-allowed' );
+		$status->value = EditPage::AS_HOOK_ERROR_EXPECTED;
 		return false;
 	}
 }

@@ -169,6 +169,10 @@ class MainHooks implements
 		User $user,
 		$minoredit
 	): bool {
-		return $this->applicationRepository->onEditFilter( $user, $content, $status );
+		if ( !$context->canUseWikiPage() ) {
+			return true;
+		}
+
+		return $this->applicationRepository->onEditFilter( $user, $context->getWikiPage(), $status );
 	}
 }
