@@ -29,9 +29,9 @@ class ApplicationRepository {
 	public const APPLICATIONS_PAGE_NAMESPACE = NS_MEDIAWIKI;
 	public const APPLICATIONS_PAGE_NAME = 'RawCSS-applications';
 
-	private const APPLICATION_REGEX = '/(*LF)^== *?([\w\-]+|\*) *?==\R((?:^===.+===\R(?:^; *?[\w-]+ *?:.+\R)*)+)/m';
-	private const APPLICATION_SECTION_REGEX = '/(*LF)^=== *(.+?) *===\R((?:^; *?[\w-]+ *?:.+\R)*)/m';
-	private const APPLICATION_SECTION_VARIABLE_REGEX = '/(*LF)^; *?([\w-]+) *?: *(.+?) *$/m';
+	private const APPLICATION_REGEX = '/^== *?([\w\-]+|\*) *?==\n((?:^===.+===\n(?:^; *?[\w-]+ *?:.+\n)*)+)/m';
+	private const APPLICATION_SECTION_REGEX = '/^=== *(.+?) *===\n((?:^; *?[\w-]+ *?:.+\n)*)/m';
+	private const APPLICATION_SECTION_VARIABLE_REGEX = '/^; *?([\w-]+) *?: *(.+?) *$/m';
 
 	private const STYLE_PAGE_ALLOWED_REGEX = '/\/\*\s*RawCSS-allowed:\s*(.+?)\s*\*\//m';
 
@@ -69,6 +69,10 @@ class ApplicationRepository {
 
 	public function getApplicationById( string $id ): ?array {
 		return $this->getApplications()[$id] ?? null;
+	}
+
+	public function doesApplicationExist( string $id ): bool {
+		return array_key_exists( $id, $this->getApplications() );
 	}
 
 	private function isUsedByAnyApplication( ProperPageIdentity $pageIdentity ): bool {
@@ -117,7 +121,7 @@ class ApplicationRepository {
 				);
 			},
 			[
-				'version' => 5,
+				'version' => 6,
 				'checkKeys' => [ $this->makeCacheKey() ],
 				'pcTTL' => ExpirationAwareness::TTL_PROC_SHORT,
 				'lockTSE' => 30,
@@ -164,7 +168,10 @@ class ApplicationRepository {
 				}
 
 				// insert
-				$applicationSpecification[$sectionTitle] = $sectionVariables;
+				$applicationSpecification[] = [
+					'title' => $sectionTitle,
+					'variables' => $sectionVariables,
+				];
 			}
 			$applications[$applicationId] = $applicationSpecification;
 		}
@@ -174,16 +181,19 @@ class ApplicationRepository {
 		foreach ( $applications as $applicationId => $applicationSpecification ) {
 			$application = [];
 
-			foreach ( $applicationSpecification as $page => $variables ) {
+			foreach ( $applicationSpecification as $section ) {
+				$title = $section['title'];
+				$variables = $section['variables'];
+
 				$styleVariables = [ 'rawcss-application-id' => $applicationId ] + $variables;
-				$stylePage = $this->pageLookup->getPageByText( $page, defaultNamespace: NS_RAWCSS );
+				$stylePage = $this->pageLookup->getPageByText( $title, defaultNamespace: NS_RAWCSS );
 				if ( $stylePage === null ) {
 					// invalid page
 					continue;
 				}
 				if ( !$stylePage->exists() ) {
 					// could exist in the future; keep this in the application so it gets purged when that page exists
-					$application[$stylePage->getDBkey()] = [
+					$application[$stylePage->getDBkey()][] = [
 						'revision' => 0,
 						'variables' => $variables,
 						'styles' => ''
@@ -197,7 +207,7 @@ class ApplicationRepository {
 				// make sure it's valid
 				if ( $stylePageContent === null ) {
 					// keep this in the application so it gets purged when that page is edited
-					$application[$stylePage->getDBkey()] = [
+					$application[$stylePage->getDBkey()][] = [
 						'revision' => 0,
 						'variables' => $variables,
 						'styles' => ''
@@ -212,14 +222,14 @@ class ApplicationRepository {
 							/** @var LessContent $stylePageContent */
 							$lessParser->parse( $stylePageContent->getText() );
 							$lessParser->ModifyVars( $styleVariables );
-							$application[$stylePage->getDBkey()] = [
+							$application[$stylePage->getDBkey()][] = [
 								'revision' => $stylePageRevision->getId(),
 								'variables' => $variables,
 								'styles' => $lessParser->getCss()
 							];
 						} catch ( Exception ) {
 							// keep this in the application so it gets purged when that page is edited
-							$application[$stylePage->getDBkey()] = [
+							$application[$stylePage->getDBkey()][] = [
 								'revision' => 0,
 								'variables' => $variables,
 								'styles' => ''
@@ -231,7 +241,7 @@ class ApplicationRepository {
 					case CONTENT_MODEL_CSS:
 						// add it directly
 						/** @var CssContent $stylePageContent */
-						$application[$stylePage->getDBkey()] = [
+						$application[$stylePage->getDBkey()][] = [
 							'revision' => $stylePageRevision->getId(),
 							'variables' => $variables,
 							'styles' => $stylePageContent->getText()

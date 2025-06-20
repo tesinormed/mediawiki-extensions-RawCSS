@@ -28,7 +28,7 @@ class ApplicationResourceLoaderModule extends Module {
 			return [];
 		}
 
-		return [ 'all' => array_column( $this->getApplication(), 'styles' ) ];
+		return [ 'all' => array_column_flat( $this->getApplication(), 'styles' ) ];
 	}
 
 	public function getSkins(): ?array {
@@ -50,8 +50,16 @@ class ApplicationResourceLoaderModule extends Module {
 	public function getDefinitionSummary( Context $context ): array {
 		$summary = parent::getDefinitionSummary( $context );
 		// use the application specification as determiners
-		$summary['revision'] = array_column( $this->getApplication(), 'revision' );
-		$summary['variables'] = array_column( $this->getApplication(), 'variables' );
+		$summary['revision'] = array_column_flat( $this->getApplication(), 'revision' );
+		$summary['variables'] = array_column_flat( $this->getApplication(), 'variables' );
 		return $summary;
 	}
+}
+
+function array_column_flat( array $array, string $column ): array {
+	$result = [];
+	foreach ( $array as $element ) {
+		$result = array_merge( $result, array_column( $element, $column ) );
+	}
+	return $result;
 }

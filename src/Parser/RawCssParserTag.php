@@ -34,7 +34,7 @@ class RawCssParserTag {
 			return self::formatError( $parser, 'rawcss-tag-missing-ref' );
 		}
 
-		if ( $this->applicationRepository->getApplicationById( $params['ref'] ) === null ) {
+		if ( !$this->applicationRepository->doesApplicationExist( $params['ref'] ) ) {
 			return self::formatError( $parser, 'rawcss-tag-invalid-ref', wfEscapeWikiText( $params['ref'] ) );
 		}
 
@@ -61,7 +61,9 @@ class RawCssParserTag {
 			$lessParser->parse( $variablesContent->getText() );
 			return [ Html::rawElement( 'style', contents: $lessParser->getCss() ), 'markerType' => 'nowiki' ];
 		} catch ( Exception ) {
-			return self::formatError( $parser, 'rawcss-tag-parsing-exception',
+			return self::formatError(
+				$parser,
+				'rawcss-tag-parsing-exception',
 				wfEscapeWikiText( $source ),
 				wfEscapeWikiText( $variables )
 			);

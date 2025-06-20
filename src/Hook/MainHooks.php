@@ -108,10 +108,8 @@ class MainHooks implements
 
 		// if there's no RawCSS module styles on this page
 		if ( count( $rawCssModuleStyles ) === 0 ) {
-			$wildcardApplication = $this->applicationRepository->getApplicationById( '*' );
-
 			// if there's a wildcard application
-			if ( $wildcardApplication !== null ) {
+			if ( $this->applicationRepository->doesApplicationExist( '*' ) ) {
 				// use the wildcard module style
 				$out->addModuleStyles( [ 'ext.rawcss.*' ] );
 			}
